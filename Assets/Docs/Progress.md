@@ -15,6 +15,7 @@
  - 自定义 Inspector：LevelVisualizerInspector 提供一键校验并显示摘要/问题
 - 核心框架：ServiceContainer（服务定位器）、UpdateDriver（统一生命周期）、Interfaces（生命周期接口）
 - 重写 Bootstrapper：接入统一初始化流程，预热配置，自动注册生命周期服务到 UpdateDriver
+ - 对象池：新增 ObjectPool<T>/GameObjectPool 与 PoolService，并接入 Bootstrapper
 
 下一步：
 - 验证 Unity 编译与运行

@@ -1,6 +1,7 @@
 using UnityEngine;
 using TD.Config;
 using TD.Common;
+using TD.Core;
 
 namespace TD.Core
 {
@@ -43,9 +44,11 @@ namespace TD.Core
                 // 注册核心服务
                 IJsonLoader jsonLoader = new StreamingAssetsJsonLoader();
                 IConfigService configService = new ConfigService(jsonLoader);
+                PoolService poolService = new PoolService();
 
                 container.Register<IJsonLoader>(jsonLoader);
                 container.Register<IConfigService>(configService);
+                container.Register<PoolService>(poolService);
 
                 // 初始化所有 IInitializable 服务
                 foreach (var service in container.GetAllServices())
