@@ -59,6 +59,7 @@ namespace TD.Core
 
         private async void EditorTick()
         {
+#if UNITY_EDITOR
             // 在编辑器下懒加载配置，避免频繁 IO
             if (_level == null && !Application.isPlaying)
             {
@@ -69,6 +70,7 @@ namespace TD.Core
                 _level = await _config.GetLevelAsync(levelId);
                 UnityEditor.SceneView.RepaintAll();
             }
+#endif
         }
 
         [ContextMenu("Validate Now")]
