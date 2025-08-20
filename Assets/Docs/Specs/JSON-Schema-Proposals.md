@@ -135,7 +135,7 @@
     "width": 20,
     "height": 12,
     "showGizmos": true,
-    "gizmoColor": "#00FF00"
+  "gizmoColor": "#00FF00FF"
   },
   "paths": [
     {
@@ -201,11 +201,11 @@
 - grid：
   - `cellSize` 作为统一格子单位（每关可配置）。
   - `width`/`height` 方便编辑与边界判定。
-  - `showGizmos`/`gizmoColor`：用于场景中可视化网格，便于对齐与摆放。
+  - `showGizmos`/`gizmoColor`：用于场景中可视化网格；`gizmoColor` 使用 8 位 RGBA 十六进制 `#RRGGBBAA`。
 - path.waypoints：折线 Waypoints（世界坐标或关卡局部坐标，建议使用关卡局部）。
 - paths：多条敌方行进路径；刷怪默认从每条路径的第一个 waypoint 出生。
-- groups.pathId：指明该组敌人沿哪条路径移动；可扩展 `startIndex` 指定从路径中途出生。
-- buildSlots：允许建塔的离散格位坐标（不在路径上，且不阻断路径），并用 `type` 区分建造点类型（如 `ground`）。
+- groups.pathId：指明该组敌人沿哪条路径移动。
+- buildSlots：允许建塔的离散格位坐标（不在路径上，且不阻断路径），并用 `type` 区分建造点类型（目前仅支持 `ground`）。
 - waves：
   - `wave`：序号；`startTime`：该波起始时间（相对关卡开始）。
   - `groups`：本波内多个出怪组，按 `delay`（可选）相对本波开始的延迟触发。
