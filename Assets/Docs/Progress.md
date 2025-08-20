@@ -8,5 +8,6 @@
 - 创建 CodingStandards.md 编码规范初版
 
 下一步：
-- 定义 C# 数据模型与加载接口（仅接口，不实现逻辑）
-- 产出 Loader 设计说明与类职责文档（简版）
+- 定义并实现最小本地加载器（StreamingAssetsJsonLoader）
+- 实现 ConfigService（缓存 + 聚合访问）
+- 场景校验器：Bootstrapper 挂载并输出加载/交叉校验日志
