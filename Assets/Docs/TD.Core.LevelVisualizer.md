@@ -10,3 +10,4 @@
 使用：
 - 将脚本挂到场景空物体；填写 `levelId`（例如 001）
 - 在 Scene 视图中可见网格、路径线段与建造点方块
+ - 自定义 Inspector：点击 "Validate Now" 一键执行校验并显示 Summary 与 Issues

@@ -22,6 +22,27 @@ namespace TD.Core
         private IConfigService _config;
         private LevelConfig _level;
 
+        [System.Serializable]
+        public class ValidationSummary
+        {
+            public string levelId;
+            public int elementsCount;
+            public int towersCount;
+            public int enemiesCount;
+            public int pathsCount;
+            public int buildSlotsCount;
+            public int wavesCount;
+            public int issuesCount;
+            public string lastCheckedAt; // ISO8601
+        }
+
+        [SerializeField] private ValidationSummary _summary;
+        [SerializeField] private string[] _issues;
+        private bool _validating;
+
+        public ValidationSummary Summary => _summary;
+        public string[] Issues => _issues;
+
         private void OnEnable()
         {
 #if UNITY_EDITOR
@@ -47,6 +68,65 @@ namespace TD.Core
                 }
                 _level = await _config.GetLevelAsync(levelId);
                 UnityEditor.SceneView.RepaintAll();
+            }
+        }
+
+        [ContextMenu("Validate Now")]
+        public async void RefreshValidation()
+        {
+            if (_validating) return;
+            _validating = true;
+            try
+            {
+                if (_config == null)
+                    _config = new ConfigService(new StreamingAssetsJsonLoader());
+
+                var elements = await _config.GetElementsAsync();
+                var towers = await _config.GetTowersAsync();
+                var enemies = await _config.GetEnemiesAsync();
+                var level = _level ?? await _config.GetLevelAsync(levelId);
+
+                var issuesList = new System.Collections.Generic.List<string>();
+                if (level?.waves != null)
+                {
+                    foreach (var w in level.waves)
+                    {
+                        if (w.groups == null) continue;
+                        foreach (var g in w.groups)
+                        {
+                            bool enemyExists = enemies.enemies.Exists(e => e.id == g.enemyId);
+                            if (!enemyExists)
+                                issuesList.Add($"Enemy not found: {g.enemyId} (wave {w.wave})");
+
+                            bool pathExists = level.paths != null && level.paths.Exists(p => p.id == g.pathId);
+                            if (!pathExists)
+                                issuesList.Add($"Path not found: {g.pathId} (wave {w.wave})");
+                        }
+                    }
+                }
+
+                _summary = new ValidationSummary
+                {
+                    levelId = level?.levelId,
+                    elementsCount = elements?.elements?.Count ?? 0,
+                    towersCount = towers?.towers?.Count ?? 0,
+                    enemiesCount = enemies?.enemies?.Count ?? 0,
+                    pathsCount = level?.paths?.Count ?? 0,
+                    buildSlotsCount = level?.buildSlots?.Count ?? 0,
+                    wavesCount = level?.waves?.Count ?? 0,
+                    issuesCount = issuesList.Count,
+                    lastCheckedAt = System.DateTime.Now.ToString("s")
+                };
+                _issues = issuesList.ToArray();
+
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+                UnityEditor.SceneView.RepaintAll();
+#endif
+            }
+            finally
+            {
+                _validating = false;
             }
         }
 
