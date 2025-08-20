@@ -5,6 +5,7 @@
 通用规定：
 - 文本编码：UTF-8，无 BOM。
 - 注释：生产 JSON 不包含注释；本文件中的注释仅作说明。
+- 坐标系：关卡内坐标统一以“关卡原点”为参考，单位为米（Unity 单位）。
 - 浮点：默认小数，角度单位为度，时间单位为秒，速度为单位/秒，距离为米（Unity 单位）。
 - 枚举字符串大小写统一使用小写，以下示例按此规范。
 - ID 使用字符串，需在各自域内唯一。
@@ -123,7 +124,7 @@
 
 ---
 
-## 4. 关卡与波次 level_001.json
+## 4. 关卡与波次 level_001.json（支持多路径、多建造点类型、每波奖励）
 ```json
 {
   "version": 1,
@@ -132,46 +133,63 @@
   "grid": {
     "cellSize": 1.0,
     "width": 20,
-    "height": 12
+    "height": 12,
+    "showGizmos": true,
+    "gizmoColor": "#00FF00"
   },
-  "path": {
-    "waypoints": [
-      { "x": 1,  "y": 0,  "z": 1 },
-      { "x": 5,  "y": 0,  "z": 1 },
-      { "x": 5,  "y": 0,  "z": 8 },
-      { "x": 15, "y": 0,  "z": 8 }
-    ]
-  },
+  "paths": [
+    {
+      "id": "p_main",
+      "waypoints": [
+        { "x": 1,  "y": 0,  "z": 1 },
+        { "x": 5,  "y": 0,  "z": 1 },
+        { "x": 5,  "y": 0,  "z": 8 },
+        { "x": 15, "y": 0,  "z": 8 }
+      ]
+    },
+    {
+      "id": "p_alt",
+      "waypoints": [
+        { "x": 2,  "y": 0,  "z": 0 },
+        { "x": 2,  "y": 0,  "z": 6 },
+        { "x": 12, "y": 0,  "z": 6 },
+        { "x": 18, "y": 0,  "z": 10 }
+      ]
+    }
+  ],
   "buildSlots": [
-    { "x": 1,  "y": 0, "z": 2 },
-    { "x": 2,  "y": 0, "z": 2 },
-    { "x": 6,  "y": 0, "z": 2 },
-    { "x": 6,  "y": 0, "z": 7 },
-    { "x": 10, "y": 0, "z": 7 },
-    { "x": 14, "y": 0, "z": 7 }
+    { "x": 1,  "y": 0, "z": 2,  "type": "ground" },
+    { "x": 2,  "y": 0, "z": 2,  "type": "ground" },
+    { "x": 6,  "y": 0, "z": 2,  "type": "ground" },
+    { "x": 6,  "y": 0, "z": 7,  "type": "ground" },
+    { "x": 10, "y": 0, "z": 7,  "type": "ground" },
+    { "x": 14, "y": 0, "z": 7,  "type": "ground" }
   ],
   "waves": [
     {
       "wave": 1,
       "startTime": 0.0,
+      "reward": 20,
       "groups": [
-        { "enemyId": "grunt",  "count": 8,  "spawnInterval": 0.8 }
+        { "enemyId": "grunt",  "count": 8,  "spawnInterval": 0.8, "pathId": "p_main" }
       ]
     },
     {
       "wave": 2,
       "startTime": 12.0,
+      "reward": 25,
       "groups": [
-        { "enemyId": "grunt",  "count": 6,  "spawnInterval": 0.7 },
-        { "enemyId": "runner", "count": 5,  "spawnInterval": 0.6, "delay": 2.0 }
+        { "enemyId": "grunt",  "count": 6,  "spawnInterval": 0.7, "pathId": "p_main" },
+        { "enemyId": "runner", "count": 5,  "spawnInterval": 0.6, "delay": 2.0, "pathId": "p_alt" }
       ]
     },
     {
       "wave": 3,
       "startTime": 26.0,
+      "reward": 40,
       "groups": [
-        { "enemyId": "tank",   "count": 3,  "spawnInterval": 1.5 },
-        { "enemyId": "runner", "count": 6,  "spawnInterval": 0.6, "delay": 3.0 }
+        { "enemyId": "tank",   "count": 3,  "spawnInterval": 1.5, "pathId": "p_main" },
+        { "enemyId": "runner", "count": 6,  "spawnInterval": 0.6, "delay": 3.0, "pathId": "p_alt" }
       ]
     }
   ],
@@ -183,12 +201,16 @@
 - grid：
   - `cellSize` 作为统一格子单位（每关可配置）。
   - `width`/`height` 方便编辑与边界判定。
+  - `showGizmos`/`gizmoColor`：用于场景中可视化网格，便于对齐与摆放。
 - path.waypoints：折线 Waypoints（世界坐标或关卡局部坐标，建议使用关卡局部）。
-- buildSlots：允许建塔的离散格位坐标（不在 path 上，且不阻断路径）。
+- paths：多条敌方行进路径；刷怪默认从每条路径的第一个 waypoint 出生。
+- groups.pathId：指明该组敌人沿哪条路径移动；可扩展 `startIndex` 指定从路径中途出生。
+- buildSlots：允许建塔的离散格位坐标（不在路径上，且不阻断路径），并用 `type` 区分建造点类型（如 `ground`）。
 - waves：
   - `wave`：序号；`startTime`：该波起始时间（相对关卡开始）。
   - `groups`：本波内多个出怪组，按 `delay`（可选）相对本波开始的延迟触发。
   - `spawnInterval`：该组内相邻单位的间隔。
+  - `reward`：该波清算奖励（金币）。
 - 经济与生命：`startMoney` 初始金币；`lives` 玩家生命数。
 
 ---
