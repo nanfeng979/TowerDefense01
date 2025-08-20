@@ -13,3 +13,4 @@
 - 场景校验器：Bootstrapper 挂载并输出加载/交叉校验日志
  - Gizmo 可视化：LevelVisualizer 显示网格/路径/建造点，ColorUtil 解析 RGBA Hex
  - 自定义 Inspector：LevelVisualizerInspector 提供一键校验并显示摘要/问题
+ - 架构：新增 IServiceContainer/ServiceContainer 与 UpdateDriver，Bootstrapper 初始化容器与驱动（移除原 Start 校验）

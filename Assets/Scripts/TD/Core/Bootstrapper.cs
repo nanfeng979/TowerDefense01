@@ -1,61 +1,44 @@
-using System.Threading.Tasks;
 using UnityEngine;
 using TD.Config;
 
 namespace TD.Core
 {
     /// <summary>
-    /// 仅用于示例：在场景中挂载以便运行时做一次配置加载校验。
-    /// 实际项目中将拆分为服务容器与独立系统。
+    /// 入口脚本：初始化服务容器与全局 UpdateDriver，不再执行数据校验。
     /// </summary>
     public class Bootstrapper : MonoBehaviour
     {
-        private IConfigService _config;
+        private static IServiceContainer _container;
 
         private void Awake()
         {
-            // 最小依赖装配
+            if (_container != null)
+            {
+                // 已初始化，避免重复实例
+                Destroy(gameObject);
+                return;
+            }
+
+            DontDestroyOnLoad(gameObject);
+
+            // 初始化服务容器
+            var container = new ServiceContainer();
+
+            // 注册配置相关服务
             IJsonLoader loader = new StreamingAssetsJsonLoader();
-            _config = new ConfigService(loader);
+            container.RegisterSingleton<IJsonLoader>(loader);
+            container.RegisterSingleton<IConfigService>(new ConfigService(loader));
+
+            // 确保 UpdateDriver 挂载
+            var driver = gameObject.GetComponent<UpdateDriver>();
+            if (driver == null) driver = gameObject.AddComponent<UpdateDriver>();
+            container.RegisterSingleton<UpdateDriver>(driver);
+
+            _container = container;
+            Debug.Log("[Bootstrap] ServiceContainer initialized and UpdateDriver attached.");
         }
 
-        private async void Start()
-        {
-            await ValidateOnce();
-        }
-
-        private async Task ValidateOnce()
-        {
-            try
-            {
-                var elements = await _config.GetElementsAsync();
-                var towers = await _config.GetTowersAsync();
-                var enemies = await _config.GetEnemiesAsync();
-                var level = await _config.GetLevelAsync("001");
-
-                Debug.Log($"[Validate] elements={elements?.elements?.Count}, towers={towers?.towers?.Count}, enemies={enemies?.enemies?.Count}");
-                Debug.Log($"[Validate] level={level?.levelId}, paths={level?.paths?.Count}, slots={level?.buildSlots?.Count}, waves={level?.waves?.Count}");
-
-                // 简单一致性检查
-                foreach (var w in level.waves)
-                {
-                    foreach (var g in w.groups)
-                    {
-                        bool enemyExists = enemies.enemies.Exists(e => e.id == g.enemyId);
-                        bool pathExists = level.paths.Exists(p => p.id == g.pathId);
-                        if (!enemyExists)
-                            Debug.LogError($"Enemy not found: {g.enemyId}");
-                        if (!pathExists)
-                            Debug.LogError($"Path not found: {g.pathId}");
-                    }
-                }
-
-                Debug.Log("[Validate] JSON load & basic cross-check OK");
-            }
-            catch (System.SystemException ex)
-            {
-                Debug.LogError($"[Validate] Failed: {ex.Message}");
-            }
-        }
+        public static T Resolve<T>() => _container.Resolve<T>();
+        public static bool TryResolve<T>(out T service) => _container.TryResolve(out service);
     }
 }
