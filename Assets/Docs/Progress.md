@@ -13,4 +13,9 @@
 - 场景校验器：Bootstrapper 挂载并输出加载/交叉校验日志
  - Gizmo 可视化：LevelVisualizer 显示网格/路径/建造点，ColorUtil 解析 RGBA Hex
  - 自定义 Inspector：LevelVisualizerInspector 提供一键校验并显示摘要/问题
- - 架构：新增 IServiceContainer/ServiceContainer 与 UpdateDriver，Bootstrapper 初始化容器与驱动（移除原 Start 校验）
+- 核心框架：ServiceContainer（服务定位器）、UpdateDriver（统一生命周期）、Interfaces（生命周期接口）
+- 重写 Bootstrapper：接入统一初始化流程，预热配置，自动注册生命周期服务到 UpdateDriver
+
+下一步：
+- 验证 Unity 编译与运行
+- 考虑增加对象池框架或开始 Gameplay 层实现

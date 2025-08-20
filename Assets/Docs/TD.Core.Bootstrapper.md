@@ -1,12 +1,15 @@
 # TD.Core.Bootstrapper
 
 职责：
-- 在场景中挂载，进行一次最小的配置加载与交叉校验，验证 JSON 与数据模型匹配。
-- 后续将迁移为更完整的服务容器与系统装配；本脚本仅用于当前阶段验证数据管线。
+- 游戏启动器：统一初始化服务容器、UpdateDriver 与核心服务。
+- 场景中唯一挂载，负责依赖装配与生命周期管理。
 
 关键点：
 - 依赖接口：`TD.Config.IConfigService`、`TD.Config.IJsonLoader`
-- 只做一次 `Start()` 异步验证，不参与游戏循环。
+- 自动创建 UpdateDriver 并注册实现生命周期接口的服务
+- 预热配置加载并输出摘要信息
+- OnDestroy 时清理所有服务
 
 注意：
-- Android 平台 StreamingAssets 走 UWR；PC/Editor 直接 File IO。
+- 替换了原来的一次性校验，现在专注于服务初始化
+- 校验功能移至 LevelVisualizer.Inspector 进行

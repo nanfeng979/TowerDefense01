@@ -1,50 +1,105 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TD.Common;
 
 namespace TD.Core
 {
     /// <summary>
-    /// 集中驱动接口，避免在多个 MonoBehaviour 中分散 Update。
+    /// 统一生命周期驱动器：集中调用所有注册服务的 Update/LateUpdate/FixedUpdate。
+    /// 单例 MonoBehaviour，避免多个 Update 回调。
     /// </summary>
     public class UpdateDriver : MonoBehaviour
     {
-        private readonly List<IUpdatable> _updates = new List<IUpdatable>();
-        private readonly List<ILateUpdatable> _lateUpdates = new List<ILateUpdatable>();
-        private readonly List<IFixedUpdatable> _fixedUpdates = new List<IFixedUpdatable>();
+        private static UpdateDriver _instance;
+        public static UpdateDriver Instance => _instance;
 
-        public void Register(IUpdatable u)
-        {
-            if (u != null && !_updates.Contains(u)) _updates.Add(u);
-        }
-        public void Unregister(IUpdatable u) { if (u != null) _updates.Remove(u); }
+        private readonly List<IUpdatable> _updatables = new List<IUpdatable>();
+        private readonly List<ILateUpdatable> _lateUpdatables = new List<ILateUpdatable>();
+        private readonly List<IFixedUpdatable> _fixedUpdatables = new List<IFixedUpdatable>();
 
-        public void Register(ILateUpdatable u)
+        private void Awake()
         {
-            if (u != null && !_lateUpdates.Contains(u)) _lateUpdates.Add(u);
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-        public void Unregister(ILateUpdatable u) { if (u != null) _lateUpdates.Remove(u); }
 
-        public void Register(IFixedUpdatable u)
+        /// <summary>
+        /// 注册 IUpdatable 服务。
+        /// </summary>
+        public void RegisterUpdatable(IUpdatable updatable)
         {
-            if (u != null && !_fixedUpdates.Contains(u)) _fixedUpdates.Add(u);
+            if (!_updatables.Contains(updatable))
+                _updatables.Add(updatable);
         }
-        public void Unregister(IFixedUpdatable u) { if (u != null) _fixedUpdates.Remove(u); }
+
+        /// <summary>
+        /// 注册 ILateUpdatable 服务。
+        /// </summary>
+        public void RegisterLateUpdatable(ILateUpdatable lateUpdatable)
+        {
+            if (!_lateUpdatables.Contains(lateUpdatable))
+                _lateUpdatables.Add(lateUpdatable);
+        }
+
+        /// <summary>
+        /// 注册 IFixedUpdatable 服务。
+        /// </summary>
+        public void RegisterFixedUpdatable(IFixedUpdatable fixedUpdatable)
+        {
+            if (!_fixedUpdatables.Contains(fixedUpdatable))
+                _fixedUpdatables.Add(fixedUpdatable);
+        }
+
+        /// <summary>
+        /// 移除服务。
+        /// </summary>
+        public void Unregister(object service)
+        {
+            if (service is IUpdatable u) _updatables.Remove(u);
+            if (service is ILateUpdatable lu) _lateUpdatables.Remove(lu);
+            if (service is IFixedUpdatable fu) _fixedUpdatables.Remove(fu);
+        }
 
         private void Update()
         {
-            for (int i = 0; i < _updates.Count; i++) _updates[i]?.OnUpdate(Time.deltaTime);
+            float dt = Time.deltaTime;
+            for (int i = 0; i < _updatables.Count; i++)
+            {
+                _updatables[i].OnUpdate(dt);
+            }
         }
+
         private void LateUpdate()
         {
-            for (int i = 0; i < _lateUpdates.Count; i++) _lateUpdates[i]?.OnLateUpdate(Time.deltaTime);
+            float dt = Time.deltaTime;
+            for (int i = 0; i < _lateUpdatables.Count; i++)
+            {
+                _lateUpdatables[i].OnLateUpdate(dt);
+            }
         }
+
         private void FixedUpdate()
         {
-            for (int i = 0; i < _fixedUpdates.Count; i++) _fixedUpdates[i]?.OnFixedUpdate(Time.fixedDeltaTime);
+            float fdt = Time.fixedDeltaTime;
+            for (int i = 0; i < _fixedUpdatables.Count; i++)
+            {
+                _fixedUpdatables[i].OnFixedUpdate(fdt);
+            }
+        }
+
+        /// <summary>
+        /// 清空所有注册的服务。
+        /// </summary>
+        public void ClearAll()
+        {
+            _updatables.Clear();
+            _lateUpdatables.Clear();
+            _fixedUpdatables.Clear();
         }
     }
-
-    public interface IUpdatable { void OnUpdate(float dt); }
-    public interface ILateUpdatable { void OnLateUpdate(float dt); }
-    public interface IFixedUpdatable { void OnFixedUpdate(float fdt); }
 }

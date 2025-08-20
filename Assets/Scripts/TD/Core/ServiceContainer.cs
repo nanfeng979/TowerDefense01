@@ -4,34 +4,75 @@ using System.Collections.Generic;
 namespace TD.Core
 {
     /// <summary>
-    /// 极简服务容器实现：线程不安全，主线程使用；仅用于本项目初始化阶段。
+    /// 简易服务定位器，支持单例注册与获取。
+    /// 线程不安全，仅供主线程使用。
     /// </summary>
-    public class ServiceContainer : IServiceContainer
+    public class ServiceContainer
     {
-        private readonly Dictionary<Type, object> _map = new Dictionary<Type, object>();
+        private static ServiceContainer _instance;
+        public static ServiceContainer Instance => _instance ??= new ServiceContainer();
 
-        public void RegisterSingleton<T>(T instance) where T : class
+        private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+
+        /// <summary>
+        /// 注册服务实例。
+        /// </summary>
+        public void Register<T>(T service) where T : class
         {
-            if (instance == null) throw new ArgumentNullException(nameof(instance));
-            var t = typeof(T);
-            _map[t] = instance;
+            var type = typeof(T);
+            if (_services.ContainsKey(type))
+                throw new InvalidOperationException($"Service {type.Name} already registered");
+            _services[type] = service;
         }
 
-        public T Resolve<T>() where T : class
+        /// <summary>
+        /// 获取服务实例。
+        /// </summary>
+        public T Get<T>() where T : class
         {
-            if (TryResolve<T>(out var s)) return s;
-            throw new InvalidOperationException($"Service not found: {typeof(T).Name}");
+            var type = typeof(T);
+            if (!_services.TryGetValue(type, out var service))
+                throw new InvalidOperationException($"Service {type.Name} not registered");
+            return (T)service;
         }
 
-        public bool TryResolve<T>(out T service) where T : class
+        /// <summary>
+        /// 尝试获取服务实例。
+        /// </summary>
+        public bool TryGet<T>(out T service) where T : class
         {
-            if (_map.TryGetValue(typeof(T), out var obj))
+            var type = typeof(T);
+            if (_services.TryGetValue(type, out var obj))
             {
-                service = obj as T;
-                return service != null;
+                service = (T)obj;
+                return true;
             }
             service = null;
             return false;
+        }
+
+        /// <summary>
+        /// 检查服务是否已注册。
+        /// </summary>
+        public bool IsRegistered<T>()
+        {
+            return _services.ContainsKey(typeof(T));
+        }
+
+        /// <summary>
+        /// 清空所有服务。
+        /// </summary>
+        public void Clear()
+        {
+            _services.Clear();
+        }
+
+        /// <summary>
+        /// 获取所有服务实例（便于批量操作）。
+        /// </summary>
+        public IEnumerable<object> GetAllServices()
+        {
+            return _services.Values;
         }
     }
 }

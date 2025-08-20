@@ -1,7 +1,13 @@
 # TD.Core.UpdateDriver
 
-职责：
-- 集中驱动 IUpdatable/ILateUpdatable/IFixedUpdatable，减少分散 Update
+职责：统一生命周期驱动器，集中调用所有服务的 Update/LateUpdate/FixedUpdate。
+
+特点：
+- 单例 MonoBehaviour，DontDestroyOnLoad
+- 减少单独 MonoBehaviour 的 Update 开销
+- 自动注册实现 IUpdatable/ILateUpdatable/IFixedUpdatable 的服务
 
 使用：
-- 由 Bootstrapper 自动挂载并注册为单例；业务系统可从容器解析并注册自身
+- 由 Bootstrapper 自动创建
+- 服务实现相应接口即可被自动驱动
+- 支持运行时注册/移除
