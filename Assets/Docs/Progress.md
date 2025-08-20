@@ -11,3 +11,4 @@
 - 定义并实现最小本地加载器（StreamingAssetsJsonLoader）
 - 实现 ConfigService（缓存 + 聚合访问）
 - 场景校验器：Bootstrapper 挂载并输出加载/交叉校验日志
+ - Gizmo 可视化：LevelVisualizer 显示网格/路径/建造点，ColorUtil 解析 RGBA Hex
