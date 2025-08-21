@@ -18,7 +18,12 @@ namespace TD.Gameplay.Bullet
 
         private void Start()
         {
-            var poolSvc = ServiceContainer.Instance.Get<PoolService>();
+            if (!ServiceContainer.Instance.TryGet<PoolService>(out var poolSvc))
+            {
+                Debug.LogError("[BulletShooter] PoolService not registered. Ensure a Bootstrapper exists in the scene and runs in Awake.");
+                enabled = false;
+                return;
+            }
             _pool = poolSvc.GetOrCreate("bullet", bulletPrefab, null, prewarm);
         }
 

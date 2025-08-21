@@ -9,6 +9,7 @@ namespace TD.Core
     /// 游戏启动器：统一初始化服务容器、UpdateDriver 与核心服务。
     /// 场景中唯一挂载，负责依赖装配与生命周期管理。
     /// </summary>
+    [DefaultExecutionOrder(-10000)]
     public class Bootstrapper : MonoBehaviour
     {
         [Header("Initialization")]
@@ -22,57 +23,69 @@ namespace TD.Core
                 var driverGO = new GameObject("[UpdateDriver]");
                 driverGO.AddComponent<UpdateDriver>();
             }
-        }
 
-        private async void Start()
-        {
-            if (initializeOnStart)
-            {
-                await InitializeServices();
-            }
-        }
-
-        public async System.Threading.Tasks.Task InitializeServices()
-        {
-            Debug.Log("[Bootstrap] Starting services initialization...");
-
+            // 同步注册核心服务，确保在任何 Start 之前可用
             try
             {
                 var container = ServiceContainer.Instance;
                 var driver = UpdateDriver.Instance;
 
-                // 注册核心服务
-                IJsonLoader jsonLoader = new StreamingAssetsJsonLoader();
-                IConfigService configService = new ConfigService(jsonLoader);
-                PoolService poolService = new PoolService();
+                // 若已注册则跳过，避免重复（例如在手动调用初始化的情况下）
+                if (!container.IsRegistered<IJsonLoader>())
+                {
+                    IJsonLoader jsonLoader = new StreamingAssetsJsonLoader();
+                    container.Register<IJsonLoader>(jsonLoader);
+                }
+                if (!container.IsRegistered<IConfigService>())
+                {
+                    var jsonLoader = container.Get<IJsonLoader>();
+                    IConfigService configService = new ConfigService(jsonLoader);
+                    container.Register<IConfigService>(configService);
+                }
+                if (!container.IsRegistered<PoolService>())
+                {
+                    PoolService poolService = new PoolService();
+                    container.Register<PoolService>(poolService);
+                }
 
-                container.Register<IJsonLoader>(jsonLoader);
-                container.Register<IConfigService>(configService);
-                container.Register<PoolService>(poolService);
-
-                // 初始化所有 IInitializable 服务
+                // 初始化与注册生命周期接口
                 foreach (var service in container.GetAllServices())
                 {
                     if (service is IInitializable init)
                     {
                         init.Initialize();
                     }
-                    // 自动注册生命周期接口到 UpdateDriver
                     if (service is IUpdatable u) driver.RegisterUpdatable(u);
                     if (service is ILateUpdatable lu) driver.RegisterLateUpdatable(lu);
                     if (service is IFixedUpdatable fu) driver.RegisterFixedUpdatable(fu);
                 }
-
-                // 预热配置加载（可选）
-                var elements = await configService.GetElementsAsync();
-                var towers = await configService.GetTowersAsync();
-                var enemies = await configService.GetEnemiesAsync();
-
-                Debug.Log($"[Bootstrap] Services initialized. Config loaded: {elements.elements.Count} elements, {towers.towers.Count} towers, {enemies.enemies.Count} enemies");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[Bootstrap] Initialization failed: {ex.Message}");
+                Debug.LogError($"[Bootstrap] Awake registration failed: {ex.Message}");
+            }
+        }
+
+        private async void Start()
+        {
+            // 仅做数据预热，避免阻塞 Awake 中的服务注册
+            if (!initializeOnStart) return;
+            await PrewarmConfigsAsync();
+        }
+
+        private async System.Threading.Tasks.Task PrewarmConfigsAsync()
+        {
+            try
+            {
+                var configService = ServiceContainer.Instance.Get<IConfigService>();
+                var elements = await configService.GetElementsAsync();
+                var towers = await configService.GetTowersAsync();
+                var enemies = await configService.GetEnemiesAsync();
+                Debug.Log($"[Bootstrap] Config prewarmed: {elements.elements.Count} elements, {towers.towers.Count} towers, {enemies.enemies.Count} enemies");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Bootstrap] Config prewarm failed: {ex.Message}");
             }
         }
 
