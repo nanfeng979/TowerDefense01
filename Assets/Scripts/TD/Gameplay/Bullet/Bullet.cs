@@ -1,11 +1,12 @@
 using UnityEngine;
 using TD.Common.Pooling;
+using TD.Gameplay.Combat;
 
 namespace TD.Gameplay.Bullet
 {
     /// <summary>
     /// 简易子弹：直线飞行，命中或超时回收。
-    /// 仅为池演示，不含伤害/命中判定。
+    /// 支持触发命中：需要本体 Collider.IsTrigger=true，目标带有 Health 组件。
     /// </summary>
     public class Bullet : MonoBehaviour, IPoolable
     {
@@ -14,6 +15,7 @@ namespace TD.Gameplay.Bullet
 
         private float _life;
         private System.Action<Bullet> _onDespawn;
+        public float damage = 10f;
 
         public void Setup(System.Action<Bullet> onDespawn)
         {
@@ -38,6 +40,16 @@ namespace TD.Gameplay.Bullet
         public void OnDespawned()
         {
             _life = 0f;
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            var dmg = other.GetComponent<IDamageable>();
+            if (dmg != null)
+            {
+                dmg.Damage(damage);
+                _onDespawn?.Invoke(this);
+            }
         }
     }
 }

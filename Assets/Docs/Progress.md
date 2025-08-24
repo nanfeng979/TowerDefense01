@@ -18,6 +18,12 @@
  - 对象池：新增 ObjectPool<T>/GameObjectPool 与 PoolService，并接入 Bootstrapper
  - 演示：Bullet（直线飞行超时回收）、BulletShooter（池化发射）、EnemyMover（沿路径移动）
 
+增量：
+- 修复服务装配时序问题：将核心服务注册移至 Bootstrapper.Awake，并设定 DefaultExecutionOrder(-10000)
+- BulletShooter 增加防御式 TryGet 提示，避免服务未注册时抛异常
+- 新增 MapRenderer：从 Level JSON 渲染地面/路径/建造点（Prefab 或 LineRenderer/Primitive 回退），支持一键生成
+
 下一步：
 - 验证 Unity 编译与运行
-- 考虑增加对象池框架或开始 Gameplay 层实现
+- Tower/Enemy Gameplay：目标选择、射击、伤害与血量；子弹命中/回收逻辑
+- MapRenderer 美术替换与瓦片规则化；路径贴花/材质细化
