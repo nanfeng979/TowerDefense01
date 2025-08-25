@@ -25,12 +25,12 @@ namespace TD.Gameplay.Map
 
         [Header("Rendering Options")]
         [Tooltip("地面瓦片缩放到 cellSize")] public bool scaleGroundToCell = true;
-        [Tooltip("路径步进相对 cellSize 的倍数（越小越密）")] [Range(0.1f, 2f)] public float pathStepMultiplier = 0.5f;
-        [Tooltip("LineRenderer 路径宽度 = cellSize * 此系数")] [Range(0.05f, 2f)] public float lineWidthScale = 0.6f;
+        [Tooltip("路径步进相对 cellSize 的倍数（越小越密）")][Range(0.1f, 2f)] public float pathStepMultiplier = 0.5f;
+        [Tooltip("LineRenderer 路径宽度 = cellSize * 此系数")][Range(0.05f, 2f)] public float lineWidthScale = 0.6f;
 
         [Header("Roots (Auto) ")]
         public Transform groundRoot;
-    public Transform pathRoot;
+        public Transform pathRoot;
         public Transform slotRoot;
 
         private LevelConfig _level;
@@ -161,17 +161,17 @@ namespace TD.Gameplay.Map
                 {
                     var a = single.waypoints[i].ToVector3();
                     var b = single.waypoints[i + 1].ToVector3();
-                        // 按 cellSize 缩放到真实坐标系
-                        a = new Vector3(a.x * cs, a.y, a.z * cs);
-                        b = new Vector3(b.x * cs, b.y, b.z * cs);
+                    // 按 cellSize 缩放到真实坐标系
+                    a = new Vector3(a.x * cs, a.y, a.z * cs);
+                    b = new Vector3(b.x * cs, b.y, b.z * cs);
 
-                        var dir = (b - a);
-                        float len = new Vector2(dir.x, dir.z).magnitude;
-                        if (len < 0.0001f) continue;
-                        dir.y = 0f;
-                        int steps = Mathf.Max(1, Mathf.CeilToInt(len / stepLen));
-                        var fwd = dir.normalized;
-                        var rot = Quaternion.LookRotation(new Vector3(fwd.x, 0f, fwd.z), Vector3.up);
+                    var dir = (b - a);
+                    float len = new Vector2(dir.x, dir.z).magnitude;
+                    if (len < 0.0001f) continue;
+                    dir.y = 0f;
+                    int steps = Mathf.Max(1, Mathf.CeilToInt(len / stepLen));
+                    var fwd = dir.normalized;
+                    var rot = Quaternion.LookRotation(new Vector3(fwd.x, 0f, fwd.z), Vector3.up);
                     for (int s = 0; s <= steps; s++)
                     {
                         float t = s / (float)steps;
@@ -185,28 +185,8 @@ namespace TD.Gameplay.Map
             }
             else
             {
-                // 使用 LineRenderer 渲染路径（局部坐标，受父物体变换影响）
-                var go = new GameObject($"Path_Line");
-                go.transform.SetParent(pathRoot, false);
-                var lr = go.AddComponent<LineRenderer>();
-                lr.useWorldSpace = false; // 关键：使用局部坐标
-                lr.positionCount = single.waypoints.Count;
-
-                var pts = new Vector3[single.waypoints.Count];
-                for (int i = 0; i < single.waypoints.Count; i++)
-                {
-                    var v = single.waypoints[i].ToVector3();
-                    // 按 cellSize 缩放并叠加 yOffset
-                    pts[i] = new Vector3(v.x * cs, yOffset + v.y + 0.02f, v.z * cs);
-                }
-                lr.SetPositions(pts);
-
-                lr.startWidth = lr.endWidth = cs * lineWidthScale;
-                lr.material = pathLineMaterial != null ? pathLineMaterial : new Material(Shader.Find("Sprites/Default"));
-                lr.textureMode = LineTextureMode.Stretch;
-                lr.alignment = LineAlignment.TransformZ;
-                lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                lr.receiveShadows = false;
+                // 不再渲染 LineRenderer 作为回退；未提供 pathTilePrefab 时跳过路径可视化
+                return;
             }
         }
 
