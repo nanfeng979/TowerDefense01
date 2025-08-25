@@ -24,8 +24,13 @@ namespace TD.Gameplay.Enemy
             var path = level.paths.Find(p => p.id == pathId);
             if (path != null)
             {
+                float cs = Mathf.Max(0.1f, level.grid != null ? level.grid.cellSize : 1f);
                 _waypoints = new List<Vector3>(path.waypoints.Count);
-                foreach (var v in path.waypoints) _waypoints.Add(v.ToVector3());
+                foreach (var v in path.waypoints)
+                {
+                    var w = v.ToVector3();
+                    _waypoints.Add(new Vector3(w.x * cs, w.y, w.z * cs));
+                }
                 transform.position = _waypoints[0];
                 _index = 0;
             }
