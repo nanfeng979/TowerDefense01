@@ -189,7 +189,7 @@ namespace TD.Core
                 {
                     if (s.type != "ground") continue; // 当前仅支持 ground
                     var pos = transform.position + new Vector3(s.x, s.y, s.z);
-                    Gizmos.DrawCube(pos + Vector3.up * 0.25f, new Vector3(0.8f, 0.5f, 0.8f));
+                    Gizmos.DrawCube(pos + Vector3.up * 0.25f, new Vector3(0.8f, 0.5f, 0.8f) * 0.9f);
                 }
             }
         }

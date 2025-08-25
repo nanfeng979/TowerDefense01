@@ -162,6 +162,10 @@ namespace TD.Gameplay.Map
                     {
                         var a = p.waypoints[i].ToVector3();
                         var b = p.waypoints[i + 1].ToVector3();
+                        // 按 cellSize 缩放到真实坐标系
+                        a = new Vector3(a.x * cs, a.y, a.z * cs);
+                        b = new Vector3(b.x * cs, b.y, b.z * cs);
+
                         var dir = (b - a);
                         float len = new Vector2(dir.x, dir.z).magnitude;
                         if (len < 0.0001f) continue;
@@ -183,20 +187,24 @@ namespace TD.Gameplay.Map
             }
             else
             {
-                // 使用 LineRenderer 作为路径回退渲染
+                // 使用 LineRenderer 渲染路径（局部坐标，受父物体变换影响）
                 foreach (var p in _level.paths)
                 {
                     var go = new GameObject($"Path_{p.id}_Line");
                     go.transform.SetParent(pathRoot, false);
                     var lr = go.AddComponent<LineRenderer>();
+                    lr.useWorldSpace = false; // 关键：使用局部坐标
                     lr.positionCount = p.waypoints.Count;
+
                     var pts = new Vector3[p.waypoints.Count];
                     for (int i = 0; i < p.waypoints.Count; i++)
                     {
                         var v = p.waypoints[i].ToVector3();
-                        pts[i] = new Vector3(v.x, yOffset + 0.02f, v.z);
+                        // 按 cellSize 缩放并叠加 yOffset
+                        pts[i] = new Vector3(v.x * cs, yOffset + v.y + 0.02f, v.z * cs);
                     }
                     lr.SetPositions(pts);
+
                     lr.startWidth = lr.endWidth = cs * lineWidthScale;
                     lr.material = pathLineMaterial != null ? pathLineMaterial : new Material(Shader.Find("Sprites/Default"));
                     lr.textureMode = LineTextureMode.Stretch;
@@ -210,21 +218,24 @@ namespace TD.Gameplay.Map
         private void RenderSlots()
         {
             if (_level.buildSlots == null || _level.buildSlots.Count == 0) return;
+            float cs = Mathf.Max(0.1f, _level.grid != null ? _level.grid.cellSize : 1f);
+
             foreach (var s in _level.buildSlots)
             {
+                var pos = new Vector3(s.x * cs, s.y + yOffset, s.z * cs);
+
                 if (buildSlotPrefab == null)
                 {
-                    // 无预制体：用 Primitive 占位
                     var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     cube.name = "BuildSlot";
                     cube.transform.SetParent(slotRoot, false);
-                    cube.transform.localScale = new Vector3(0.8f, 0.5f, 0.8f);
-                    cube.transform.localPosition = new Vector3(s.x, s.y + yOffset + 0.25f, s.z);
+                    cube.transform.localScale = new Vector3(0.8f * cs, 0.5f, 0.8f * cs);
+                    cube.transform.localPosition = new Vector3(pos.x, pos.y + 0.25f, pos.z);
                 }
                 else
                 {
                     var go = Instantiate(buildSlotPrefab, slotRoot);
-                    go.transform.localPosition = new Vector3(s.x, s.y + yOffset, s.z);
+                    go.transform.localPosition = pos;
                 }
             }
         }
