@@ -24,7 +24,8 @@ namespace TD.Gameplay.Bullet
                 enabled = false;
                 return;
             }
-            _pool = poolSvc.GetOrCreate("bullet", bulletPrefab, null, prewarm);
+            // 将对象池的根节点设置为当前发射器，这样生成的子弹会在该对象下
+            _pool = poolSvc.GetOrCreate("bullet", bulletPrefab, transform, prewarm);
         }
 
         private void Update()
@@ -33,7 +34,7 @@ namespace TD.Gameplay.Bullet
             if (_timer >= 1f / Mathf.Max(0.01f, fireRate))
             {
                 _timer = 0f;
-                var go = _pool.Spawn(transform.position, transform.rotation);
+                var go = _pool.Spawn(transform.position, transform.rotation, transform);
                 var b = go.GetComponent<Bullet>();
                 if (b != null)
                 {

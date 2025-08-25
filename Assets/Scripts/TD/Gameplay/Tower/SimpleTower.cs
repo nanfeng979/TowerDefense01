@@ -1,5 +1,6 @@
 using UnityEngine;
 using TD.Gameplay.Enemy;
+using BulletComponent = TD.Gameplay.Bullet.Bullet;
 using TD.Core;
 using TD.Common.Pooling;
 
@@ -26,7 +27,7 @@ namespace TD.Gameplay.Tower
                 Debug.LogError("[SimpleTower] PoolService not registered (Bootstrapper missing?)");
                 return;
             }
-            _pool = poolSvc.GetOrCreate(poolKey, bulletPrefab, null, prewarm: 8);
+            _pool = poolSvc.GetOrCreate(poolKey, bulletPrefab, transform, prewarm: 8);
         }
 
         private void Update()
@@ -43,8 +44,18 @@ namespace TD.Gameplay.Tower
             if (dir.sqrMagnitude < 0.0001f) return;
             var rot = Quaternion.LookRotation(dir.normalized, Vector3.up);
 
-            var go = _pool.Spawn(transform.position, rot);
-            // Bullet 将在自身 Update 中直线前进并在命中时回收
+            var go = _pool.Spawn(transform.position, rot, transform);
+            var bullet = go.GetComponent<BulletComponent>();
+            if (bullet != null)
+            {
+                bullet.Setup(OnBulletTimeout);
+            }
+            // Bullet: 直线飞行，命中或超时通过回调回收
+        }
+
+        private void OnBulletTimeout(BulletComponent bullet)
+        {
+            _pool.Despawn(bullet.gameObject);
         }
     }
 }
