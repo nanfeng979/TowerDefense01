@@ -16,7 +16,7 @@
   - towers.json （塔定义）
   - enemies.json （敌人定义）
   - levels/
-    - level_001.json （关卡与波次与路径）
+    - level_001.json （关卡与波次与路径，文件名使用 level_<短ID>.json，如 level_001.json）
 
 ---
 
@@ -124,11 +124,11 @@
 
 ---
 
-## 4. 关卡与波次 level_001.json（支持多路径、多建造点类型、每波奖励）
+## 4. 关卡与波次 level_001.json（单一路径、每波奖励）
 ```json
 {
   "version": 1,
-  "levelId": "level_001",
+  "levelId": "001",
   "displayName": "Greenfield",
   "grid": {
     "cellSize": 1.0,
@@ -137,26 +137,15 @@
     "showGizmos": true,
   "gizmoColor": "#00FF00FF"
   },
-  "paths": [
-    {
-      "id": "p_main",
-      "waypoints": [
-        { "x": 1,  "y": 0,  "z": 1 },
-        { "x": 5,  "y": 0,  "z": 1 },
-        { "x": 5,  "y": 0,  "z": 8 },
-        { "x": 15, "y": 0,  "z": 8 }
-      ]
-    },
-    {
-      "id": "p_alt",
-      "waypoints": [
-        { "x": 2,  "y": 0,  "z": 0 },
-        { "x": 2,  "y": 0,  "z": 6 },
-        { "x": 12, "y": 0,  "z": 6 },
-        { "x": 18, "y": 0,  "z": 10 }
-      ]
-    }
-  ],
+  "path": {
+    "id": "p_main",
+    "waypoints": [
+      { "x": 1,  "y": 0,  "z": 1 },
+      { "x": 5,  "y": 0,  "z": 1 },
+      { "x": 5,  "y": 0,  "z": 8 },
+      { "x": 15, "y": 0,  "z": 8 }
+    ]
+  },
   "buildSlots": [
     { "x": 1,  "y": 0, "z": 2,  "type": "ground" },
     { "x": 2,  "y": 0, "z": 2,  "type": "ground" },
@@ -171,7 +160,7 @@
       "startTime": 0.0,
       "reward": 20,
       "groups": [
-        { "enemyId": "grunt",  "count": 8,  "spawnInterval": 0.8, "pathId": "p_main" }
+  { "enemyId": "grunt",  "count": 8,  "spawnInterval": 0.8 }
       ]
     },
     {
@@ -179,8 +168,8 @@
       "startTime": 12.0,
       "reward": 25,
       "groups": [
-        { "enemyId": "grunt",  "count": 6,  "spawnInterval": 0.7, "pathId": "p_main" },
-        { "enemyId": "runner", "count": 5,  "spawnInterval": 0.6, "delay": 2.0, "pathId": "p_alt" }
+  { "enemyId": "grunt",  "count": 6,  "spawnInterval": 0.7 },
+  { "enemyId": "runner", "count": 5,  "spawnInterval": 0.6, "delay": 2.0 }
       ]
     },
     {
@@ -188,8 +177,8 @@
       "startTime": 26.0,
       "reward": 40,
       "groups": [
-        { "enemyId": "tank",   "count": 3,  "spawnInterval": 1.5, "pathId": "p_main" },
-        { "enemyId": "runner", "count": 6,  "spawnInterval": 0.6, "delay": 3.0, "pathId": "p_alt" }
+  { "enemyId": "tank",   "count": 3,  "spawnInterval": 1.5 },
+  { "enemyId": "runner", "count": 6,  "spawnInterval": 0.6, "delay": 3.0 }
       ]
     }
   ],
@@ -203,8 +192,7 @@
   - `width`/`height` 方便编辑与边界判定。
   - `showGizmos`/`gizmoColor`：用于场景中可视化网格；`gizmoColor` 使用 8 位 RGBA 十六进制 `#RRGGBBAA`。
 - path.waypoints：折线 Waypoints（世界坐标或关卡局部坐标，建议使用关卡局部）。
-- paths：多条敌方行进路径；刷怪默认从每条路径的第一个 waypoint 出生。
-- groups.pathId：指明该组敌人沿哪条路径移动。
+- path：单条敌方行进路径；刷怪默认从第一个 waypoint 出生。
 - buildSlots：允许建塔的离散格位坐标（不在路径上，且不阻断路径），并用 `type` 区分建造点类型（目前仅支持 `ground`）。
 - waves：
   - `wave`：序号；`startTime`：该波起始时间（相对关卡开始）。

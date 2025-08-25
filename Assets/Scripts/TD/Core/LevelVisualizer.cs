@@ -7,7 +7,7 @@ namespace TD.Core
 {
     /// <summary>
     /// 读取 LevelConfig 并在场景中用 Gizmos 可视化网格、路径与建造点。
-    /// 将本脚本挂到场景中任意物体；在 Inspector 指定 levelId。
+    /// 将本脚本挂到场景中任意物体；在 Inspector 指定 levelId（短格式，如 "001"）。
     /// </summary>
     [ExecuteAlways]
     public class LevelVisualizer : MonoBehaviour
@@ -99,10 +99,6 @@ namespace TD.Core
                             bool enemyExists = enemies.enemies.Exists(e => e.id == g.enemyId);
                             if (!enemyExists)
                                 issuesList.Add($"Enemy not found: {g.enemyId} (wave {w.wave})");
-
-                            bool pathExists = level.paths != null && level.paths.Exists(p => p.id == g.pathId);
-                            if (!pathExists)
-                                issuesList.Add($"Path not found: {g.pathId} (wave {w.wave})");
                         }
                     }
                 }
@@ -113,7 +109,7 @@ namespace TD.Core
                     elementsCount = elements?.elements?.Count ?? 0,
                     towersCount = towers?.towers?.Count ?? 0,
                     enemiesCount = enemies?.enemies?.Count ?? 0,
-                    pathsCount = level?.paths?.Count ?? 0,
+                    pathsCount = level?.path != null ? 1 : 0,
                     buildSlotsCount = level?.buildSlots?.Count ?? 0,
                     wavesCount = level?.waves?.Count ?? 0,
                     issuesCount = issuesList.Count,
@@ -136,6 +132,10 @@ namespace TD.Core
         {
             if (_level == null) return;
 
+            float cs = 1f;
+            if (_level.grid != null)
+                cs = Mathf.Max(0.1f, _level.grid.cellSize);
+
             // 网格
             if (_level.grid != null && _level.grid.showGizmos)
             {
@@ -144,7 +144,6 @@ namespace TD.Core
                 else
                     Gizmos.color = Color.green;
 
-                float cs = Mathf.Max(0.1f, _level.grid.cellSize);
                 int w = Mathf.Max(1, _level.grid.width);
                 int h = Mathf.Max(1, _level.grid.height);
 
@@ -164,20 +163,23 @@ namespace TD.Core
             }
 
             // 路径
-            if (_level.paths != null)
+            if (_level.path != null)
             {
                 Gizmos.color = pathColor;
-                foreach (var p in _level.paths)
+                var p = _level.path;
+                for (int i = 0; i < p.waypoints.Count - 1; i++)
                 {
-                    for (int i = 0; i < p.waypoints.Count - 1; i++)
-                    {
-                        var a = transform.position + p.waypoints[i].ToVector3();
-                        var b = transform.position + p.waypoints[i + 1].ToVector3();
-                        Gizmos.DrawLine(a, b);
-                        Gizmos.DrawSphere(a, 0.1f);
-                    }
-                    if (p.waypoints.Count > 0)
-                        Gizmos.DrawSphere(transform.position + p.waypoints.Last().ToVector3(), 0.1f);
+                    var av = p.waypoints[i].ToVector3();
+                    var bv = p.waypoints[i + 1].ToVector3();
+                    var a = transform.position + new Vector3(av.x * cs, av.y, av.z * cs);
+                    var b = transform.position + new Vector3(bv.x * cs, bv.y, bv.z * cs);
+                    Gizmos.DrawLine(a, b);
+                    Gizmos.DrawSphere(a, 0.1f);
+                }
+                if (p.waypoints.Count > 0)
+                {
+                    var lv = p.waypoints.Last().ToVector3();
+                    Gizmos.DrawSphere(transform.position + new Vector3(lv.x * cs, lv.y, lv.z * cs), 0.1f);
                 }
             }
 
@@ -188,7 +190,7 @@ namespace TD.Core
                 foreach (var s in _level.buildSlots)
                 {
                     if (s.type != "ground") continue; // 当前仅支持 ground
-                    var pos = transform.position + new Vector3(s.x, s.y, s.z);
+                    var pos = transform.position + new Vector3(s.x * cs, s.y, s.z * cs);
                     Gizmos.DrawCube(pos + Vector3.up * 0.25f, new Vector3(0.8f, 0.5f, 0.8f) * 0.9f);
                 }
             }

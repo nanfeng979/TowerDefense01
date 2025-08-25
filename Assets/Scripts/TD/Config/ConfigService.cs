@@ -40,6 +40,7 @@ namespace TD.Config
 
         public Task<LevelConfig> GetLevelAsync(string levelId)
         {
+            // 统一采用短格式（如 "001"），并在此处拼接文件名。
             return _loader.LoadAsync<LevelConfig>($"levels/level_{levelId}.json");
         }
     }

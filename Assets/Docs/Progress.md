@@ -27,3 +27,12 @@
 - 验证 Unity 编译与运行
 - Tower/Enemy Gameplay：目标选择、射击、伤害与血量；子弹命中/回收逻辑
 - MapRenderer 美术替换与瓦片规则化；路径贴花/材质细化
+
+## 2025-08-26
+- 统一 levelId 使用短格式（如 001）；关卡文件仍为 `levels/level_<id>.json`
+- 更新 level_001.json/level_002.json 的 `levelId` 字段为短格式；代码默认值与加载逻辑匹配
+- 清理遗留多路径/pathId 相关注释与文档：
+	- JSON-Schema-Proposals.md 调整为单路径 `path` 模式，移除 `paths`/`pathId`
+	- EnemyMover 移除 `pathId` 字段；LevelVisualizer/MapRenderer/Inspector 文案统一
+	- Project-Code-Summary/CodingStandards/Demo-Pooling-Setup 等文档同步更新
+- LevelVisualizer 的 Gizmos 绘制与 MapRenderer/EnemyMover 一致，按 `grid.cellSize` 缩放

@@ -78,7 +78,7 @@ namespace TD.Config
         public string levelId;
         public string displayName;
         public GridConfig grid;
-        public List<PathConfig> paths;
+        public PathConfig path;
         public List<BuildSlot> buildSlots;
         public List<WaveConfig> waves;
         public int lives;
@@ -137,6 +137,6 @@ namespace TD.Config
         public int count;
         public float spawnInterval;
         public float delay; // optional, JsonUtility 默认值 0 即未设置
-        public string pathId;
+                            // 单路径模式，移除 pathId
     }
 }

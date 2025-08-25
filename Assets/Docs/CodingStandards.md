@@ -19,7 +19,7 @@
 
 ## JSON 规范
 - 编码 UTF-8；不包含注释。
-- 字段名统一小写加驼峰：`pathId`/`startTime`。
+- 字段名统一小写加驼峰：`startTime`（单路径模式已不使用 pathId）。
 - 颜色：使用 RGBA 8位 HEX `#RRGGBBAA`。
 - ID 为字符串并在域内唯一。
 

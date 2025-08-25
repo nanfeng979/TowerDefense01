@@ -21,5 +21,5 @@
 3) 运行或点击 “Generate Map Now” 生成
 
 注意：
-- 生成内容位于组件下的 [Ground]/[Paths]/[BuildSlots] 子节点；勾选 clearBeforeGenerate 会先清空
+- 生成内容位于组件下的 [Ground]/[Path]/[BuildSlots] 子节点；勾选 clearBeforeGenerate 会先清空
 - 路径步进密度由 pathStepMultiplier 决定；LineRenderer 宽度由 lineWidthScale 决定

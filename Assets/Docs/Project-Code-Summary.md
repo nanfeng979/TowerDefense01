@@ -48,7 +48,7 @@
 - UpdateDriver：在一个 MonoBehaviour 中集中驱动各生命周期接口，避免分散 Update 带来的开销与时序复杂度
 
 ## 配置数据与可视化
-- JsonModels：Elements/Towers/Enemies/Level（含 Grid、Paths、BuildSlots、Waves）
+- JsonModels：Elements/Towers/Enemies/Level（含 Grid、Path、BuildSlots、Waves）
 - StreamingAssetsJsonLoader：
   - Editor/PC：直接文件 IO
   - Android：UnityWebRequest 读取 StreamingAssets
@@ -73,7 +73,7 @@
 
 ## 最小玩法循环（MVP）
 - 敌人：
-  - EnemyMover：沿 Level.pathId 指定路径点移动
+  - EnemyMover：沿 Level.path（单一路径）移动
   - Health（IDamageable）：承伤与死亡回调，支持 destroyOnDeath
   - EnemyAgent：注册到 EnemyRegistry，死亡/禁用时自动移除
 - 子弹：

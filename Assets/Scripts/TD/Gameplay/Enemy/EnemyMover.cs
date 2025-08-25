@@ -6,22 +6,24 @@ using TD.Config;
 namespace TD.Gameplay.Enemy
 {
     /// <summary>
-    /// 敌人沿 LevelConfig 的 pathId 路径移动的演示。
+    /// 敌人沿 LevelConfig 的单一路径（level.path）移动的演示。
     /// 仅演示对象池与路径跟随，不含生命/伤害。
     /// </summary>
     public class EnemyMover : MonoBehaviour
     {
-        public string pathId = "p_main";
-        public float speed = 2f;
+    public string levelId = "001";
+    public float speed = 2f;
 
-        private List<Vector3> _waypoints;
-        private int _index;
+    private List<Vector3> _waypoints;
+    private int _index;
+    private bool _manualWaypoints;
 
         private async void Start()
         {
+            if (_manualWaypoints) return; // 已手动设置
             var config = ServiceContainer.Instance.Get<IConfigService>();
-            var level = await config.GetLevelAsync("001");
-            var path = level.paths.Find(p => p.id == pathId);
+            var level = await config.GetLevelAsync(levelId);
+            var path = level.path;
             if (path != null)
             {
                 float cs = Mathf.Max(0.1f, level.grid != null ? level.grid.cellSize : 1f);
@@ -53,6 +55,18 @@ namespace TD.Gameplay.Enemy
             dir.Normalize();
             transform.position = pos + dir * speed * Time.deltaTime;
             transform.forward = dir;
+        }
+
+        /// <summary>
+        /// 直接设置路径点（世界坐标）。调用后将忽略 Start 中的自动加载。
+        /// </summary>
+        public void SetWaypoints(List<Vector3> worldWaypoints)
+        {
+            if (worldWaypoints == null || worldWaypoints.Count == 0) return;
+            _waypoints = worldWaypoints;
+            _manualWaypoints = true;
+            _index = 0;
+            transform.position = _waypoints[0];
         }
     }
 }

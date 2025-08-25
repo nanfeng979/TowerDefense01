@@ -10,7 +10,7 @@
    - 创建一个 Cube 作为子弹 prefab（缩放 0.2,0.2,0.6），添加 `TD.Gameplay.Bullet.Bullet`
    - 场景放置空物体 `Shooter`，挂 `TD.Gameplay.Bullet.BulletShooter`，拖入子弹 prefab，调整 fireRate
 3) 敌人演示：
-   - 创建一个 Capsule 作为敌人，添加 `TD.Gameplay.Enemy.EnemyMover`（pathId=p_main）
+   - 创建一个 Capsule 作为敌人，添加 `TD.Gameplay.Enemy.EnemyMover`（仅需设置 levelId，单路径）
    - 运行后敌人将沿关卡路径移动
 
 说明：

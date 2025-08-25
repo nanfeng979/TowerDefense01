@@ -116,11 +116,11 @@ namespace TD.Gameplay.Spawn
         {
             if (g == null || g.count <= 0) return;
 
-            // 路径起点坐标
-            var path = _level.paths?.FirstOrDefault(p => p.id == g.pathId);
+            // 单一路径
+            var path = _level.path;
             if (path == null || path.waypoints == null || path.waypoints.Count == 0)
             {
-                Debug.LogWarning($"[WaveSpawner] Path not found or empty: {g.pathId}");
+                Debug.LogWarning($"[WaveSpawner] Level.path missing or empty");
                 return;
             }
 
@@ -158,7 +158,7 @@ namespace TD.Gameplay.Spawn
                 var go = pool.Spawn(spawnPos, spawnRot);
                 // 设置 EnemyMover 的路径（由其在 Start 中按 cellSize 加载路径）
                 var mover = go.GetComponent<TD.Gameplay.Enemy.EnemyMover>();
-                if (mover != null) mover.pathId = g.pathId;
+                if (mover != null) { mover.levelId = levelId; /* 单路径下 mover 只需 levelId 即可 */ }
 
                 if (i < g.count - 1 && g.spawnInterval > 0f)
                 {
