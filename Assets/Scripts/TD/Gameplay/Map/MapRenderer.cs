@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TD.Config;
 using TD.Core;
+using TD.Gameplay.Tower;
 
 namespace TD.Gameplay.Map
 {
@@ -22,6 +23,13 @@ namespace TD.Gameplay.Map
         [Tooltip("路径瓦片预制体（建议 1x1 XZ 单位大小）。留空则使用 LineRenderer 渲染路径")] public GameObject pathTilePrefab;
         [Tooltip("建造点占位预制体")] public GameObject buildSlotPrefab;
         public Material pathLineMaterial;
+
+    [Header("Default Tower On Slots (Optional)")]
+    [Tooltip("在每个建造点上自动挂载 SimpleTower 组件")] public bool addSimpleTowerOnSlots = true;
+    [Tooltip("默认塔使用的子弹预制体（可为空，为空则组件先禁用）")] public GameObject simpleTowerBulletPrefab;
+    [Tooltip("默认塔射程")] public float simpleTowerRange = 8f;
+    [Tooltip("默认塔射速（每秒发射次数）")] public float simpleTowerFireRate = 1.5f;
+    [Tooltip("对象池键名")] public string simpleTowerPoolKey = "tower_bullet";
 
         [Header("Rendering Options")]
         [Tooltip("地面瓦片缩放到 cellSize")] public bool scaleGroundToCell = true;
@@ -206,12 +214,34 @@ namespace TD.Gameplay.Map
                     cube.transform.SetParent(slotRoot, false);
                     cube.transform.localScale = new Vector3(0.8f * cs, 0.5f, 0.8f * cs);
                     cube.transform.localPosition = new Vector3(pos.x, pos.y + 0.25f, pos.z);
+                    TryAttachSimpleTower(cube);
                 }
                 else
                 {
                     var go = Instantiate(buildSlotPrefab, slotRoot);
                     go.transform.localPosition = pos;
+                    TryAttachSimpleTower(go);
                 }
+            }
+        }
+
+        private void TryAttachSimpleTower(GameObject host)
+        {
+            if (!addSimpleTowerOnSlots || host == null) return;
+            // 避免重复添加
+            var existing = host.GetComponent<SimpleTower>();
+            if (existing != null) return;
+
+            var tower = host.AddComponent<SimpleTower>();
+            tower.range = simpleTowerRange;
+            tower.fireRate = simpleTowerFireRate;
+            tower.poolKey = simpleTowerPoolKey;
+            tower.bulletPrefab = simpleTowerBulletPrefab;
+
+            // 若未指定子弹预制体，则先禁用，避免运行时报错；稍后可在实例上手动指定再启用
+            if (tower.bulletPrefab == null)
+            {
+                tower.enabled = false;
             }
         }
     }
