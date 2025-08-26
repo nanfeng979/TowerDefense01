@@ -19,17 +19,22 @@ namespace TD.Gameplay.Map
         public float yOffset = 0f;
 
         [Header("Prefabs / Materials")]
-        [Tooltip("地面格子预制体（建议 1x1 XZ 单位大小）")] public GameObject groundTilePrefab;
-        [Tooltip("路径瓦片预制体（建议 1x1 XZ 单位大小）。留空则使用 LineRenderer 渲染路径")] public GameObject pathTilePrefab;
+        [Tooltip("地面格子预制体（建议 1x1 XZ 单位大小）")] public GameObject groundTilePrefab; // 旧方案：整格地面
+        [Tooltip("路径瓦片预制体（建议 1x1 XZ 单位大小）。留空则不单独渲染路径")] public GameObject pathTilePrefab; // 旧方案：路径瓦片
         [Tooltip("建造点占位预制体")] public GameObject buildSlotPrefab;
-        public Material pathLineMaterial;
+        public Material pathLineMaterial; // 已废弃（不再使用 LineRenderer）
 
-    [Header("Default Tower On Slots (Optional)")]
-    [Tooltip("在每个建造点上自动挂载 SimpleTower 组件")] public bool addSimpleTowerOnSlots = true;
-    [Tooltip("默认塔使用的子弹预制体（可为空，为空则组件先禁用）")] public GameObject simpleTowerBulletPrefab;
-    [Tooltip("默认塔射程")] public float simpleTowerRange = 8f;
-    [Tooltip("默认塔射速（每秒发射次数）")] public float simpleTowerFireRate = 1.5f;
-    [Tooltip("对象池键名")] public string simpleTowerPoolKey = "tower_bullet";
+        [Header("Terrain Prefabs (New)")]
+        [Tooltip("草地 Quad 预制体（1x1 单位，已朝上铺在 XZ 平面）")] public GameObject grassQuadPrefab;
+        [Tooltip("土地（道路）Quad 预制体（1x1 单位，已朝上铺在 XZ 平面）")] public GameObject soilQuadPrefab;
+        [Tooltip("岩石预制体（可选），props 中 type==rock 时使用")] public GameObject rockPrefab;
+
+        [Header("Default Tower On Slots (Optional)")]
+        [Tooltip("在每个建造点上自动挂载 SimpleTower 组件")] public bool addSimpleTowerOnSlots = true;
+        [Tooltip("默认塔使用的子弹预制体（可为空，为空则组件先禁用）")] public GameObject simpleTowerBulletPrefab;
+        [Tooltip("默认塔射程")] public float simpleTowerRange = 8f;
+        [Tooltip("默认塔射速（每秒发射次数）")] public float simpleTowerFireRate = 1.5f;
+        [Tooltip("对象池键名")] public string simpleTowerPoolKey = "tower_bullet";
 
         [Header("Rendering Options")]
         [Tooltip("地面瓦片缩放到 cellSize")] public bool scaleGroundToCell = true;
@@ -40,6 +45,8 @@ namespace TD.Gameplay.Map
         public Transform groundRoot;
         public Transform pathRoot;
         public Transform slotRoot;
+        public Transform terrainRoot;
+        public Transform propsRoot;
 
         private LevelConfig _level;
 
@@ -77,9 +84,19 @@ namespace TD.Gameplay.Map
             }
 
             EnsureRoots();
-            RenderGround();
-            RenderPaths();
+            // 优先使用新地形系统（若提供了 grass/soil 预制体或 JSON 提供了 terrain 字段）
+            bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null);
+            if (useNewTerrain)
+            {
+                RenderTerrain();
+            }
+            else
+            {
+                RenderGround();
+                RenderPaths();
+            }
             RenderSlots();
+            RenderProps();
         }
 
         private void EnsureRoots()
@@ -87,6 +104,8 @@ namespace TD.Gameplay.Map
             if (groundRoot == null) groundRoot = CreateChild("[Ground]");
             if (pathRoot == null) pathRoot = CreateChild("[Path]");
             if (slotRoot == null) slotRoot = CreateChild("[BuildSlots]");
+            if (terrainRoot == null) terrainRoot = CreateChild("[Terrain]");
+            if (propsRoot == null) propsRoot = CreateChild("[Props]");
         }
 
         private Transform CreateChild(string name)
@@ -102,6 +121,8 @@ namespace TD.Gameplay.Map
             if (groundRoot != null) DestroyAllChildren(groundRoot);
             if (pathRoot != null) DestroyAllChildren(pathRoot);
             if (slotRoot != null) DestroyAllChildren(slotRoot);
+            if (terrainRoot != null) DestroyAllChildren(terrainRoot);
+            if (propsRoot != null) DestroyAllChildren(propsRoot);
         }
 
         private void DestroyAllChildren(Transform root)
@@ -243,6 +264,133 @@ namespace TD.Gameplay.Map
             {
                 tower.enabled = false;
             }
+        }
+
+        // === New Terrain System ===
+        private void RenderTerrain()
+        {
+            int w = Mathf.Max(1, _level.grid != null ? _level.grid.width : 1);
+            int h = Mathf.Max(1, _level.grid != null ? _level.grid.height : 1);
+            float cs = Mathf.Max(0.1f, _level.grid != null ? _level.grid.cellSize : 1f);
+
+            // 初始类型：默认 grass
+            string defaultType = _level.terrain != null && !string.IsNullOrEmpty(_level.terrain.@default)
+                ? _level.terrain.@default.ToLowerInvariant()
+                : "grass";
+
+            var cellType = new string[w, h];
+            for (int x = 0; x < w; x++)
+                for (int z = 0; z < h; z++)
+                    cellType[x, z] = defaultType;
+
+            // 从路径派生的土路
+            if (_level.path != null && _level.path.waypoints != null && _level.path.waypoints.Count > 1)
+            {
+                bool fromPathEnabled = _level.terrain == null || _level.terrain.fromPath == null ? true : _level.terrain.fromPath.enabled;
+                float pathWidthCells = _level.terrain != null && _level.terrain.fromPath != null ? _level.terrain.fromPath.widthInCells : 1.5f;
+                float halfWidth = Mathf.Max(0.05f, pathWidthCells * cs * 0.5f);
+
+                if (fromPathEnabled)
+                {
+                    // 预计算世界坐标的路径点
+                    var wp = _level.path.waypoints;
+                    var worldPts = new List<Vector3>(wp.Count);
+                    for (int i = 0; i < wp.Count; i++)
+                    {
+                        var v = wp[i].ToVector3();
+                        worldPts.Add(new Vector3(v.x * cs, v.y, v.z * cs));
+                    }
+
+                    for (int x = 0; x < w; x++)
+                    {
+                        for (int z = 0; z < h; z++)
+                        {
+                            var p = new Vector3((x + 0.5f) * cs, 0f, (z + 0.5f) * cs);
+                            // 判断与任一线段的水平距离
+                            bool nearPath = false;
+                            for (int i = 0; i < worldPts.Count - 1 && !nearPath; i++)
+                            {
+                                float d = DistPointToSegmentXZ(p, worldPts[i], worldPts[i + 1]);
+                                if (d <= halfWidth) nearPath = true;
+                            }
+                            if (nearPath) cellType[x, z] = "soil";
+                        }
+                    }
+                }
+            }
+
+            // overrides 应用（矩形强制类型）
+            if (_level.terrain != null && _level.terrain.overrides != null)
+            {
+                foreach (var ov in _level.terrain.overrides)
+                {
+                    if (ov == null || ov.rect == null || string.IsNullOrEmpty(ov.type)) continue;
+                    string t = ov.type.ToLowerInvariant();
+                    int x0 = Mathf.Max(0, ov.rect.x);
+                    int z0 = Mathf.Max(0, ov.rect.z);
+                    int x1 = Mathf.Min(w, ov.rect.x + ov.rect.w);
+                    int z1 = Mathf.Min(h, ov.rect.z + ov.rect.h);
+                    for (int x = x0; x < x1; x++)
+                        for (int z = z0; z < z1; z++)
+                            cellType[x, z] = t;
+                }
+            }
+
+            // 实例化 Quad
+            for (int x = 0; x < w; x++)
+            {
+                for (int z = 0; z < h; z++)
+                {
+                    var t = cellType[x, z];
+                    GameObject prefab = null;
+                    if (t == "soil") prefab = soilQuadPrefab != null ? soilQuadPrefab : grassQuadPrefab;
+                    else prefab = grassQuadPrefab != null ? grassQuadPrefab : soilQuadPrefab;
+                    if (prefab == null) continue; // 两者都没配则跳过
+
+                    var pos = new Vector3(x * cs, yOffset, z * cs);
+                    var go = Instantiate(prefab, terrainRoot);
+                    go.transform.localPosition = pos;
+                    // 尺寸缩放到 cellSize（仅缩放 X/Z，保留当前 Y 尺寸）
+                    var s = go.transform.localScale;
+                    go.transform.localScale = new Vector3(cs, s.y, cs);
+                }
+            }
+        }
+
+        private void RenderProps()
+        {
+            if (_level.props == null || _level.props.Count == 0) return;
+            float cs = Mathf.Max(0.1f, _level.grid != null ? _level.grid.cellSize : 1f);
+            foreach (var p in _level.props)
+            {
+                if (p == null || string.IsNullOrEmpty(p.type)) continue;
+                string t = p.type.ToLowerInvariant();
+                GameObject prefab = null;
+                switch (t)
+                {
+                    case "rock": prefab = rockPrefab; break;
+                    default: prefab = null; break;
+                }
+                if (prefab == null) continue;
+                var go = Instantiate(prefab, propsRoot);
+                go.transform.localPosition = new Vector3(p.x * cs, p.y + yOffset, p.z * cs);
+                go.transform.localRotation = Quaternion.Euler(0f, p.rotY, 0f);
+                go.transform.localScale = Vector3.one * (p.scale <= 0f ? 1f : p.scale);
+            }
+        }
+
+        private float DistPointToSegmentXZ(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector2 p2 = new Vector2(p.x, p.z);
+            Vector2 a2 = new Vector2(a.x, a.z);
+            Vector2 b2 = new Vector2(b.x, b.z);
+            Vector2 ab = b2 - a2;
+            float len2 = Vector2.Dot(ab, ab);
+            if (len2 < 1e-6f) return Vector2.Distance(p2, a2);
+            float t = Vector2.Dot(p2 - a2, ab) / len2;
+            t = Mathf.Clamp01(t);
+            Vector2 c = a2 + ab * t;
+            return Vector2.Distance(p2, c);
         }
     }
 }

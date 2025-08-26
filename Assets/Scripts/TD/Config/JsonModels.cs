@@ -80,6 +80,8 @@ namespace TD.Config
         public GridConfig grid;
         public PathConfig path;
         public List<BuildSlot> buildSlots;
+        public TerrainConfig terrain; // 地表配置（默认草地、路径生成土地、覆盖区）
+        public List<PropConfig> props; // 环境物件（岩石等）
         public RoundsContainer rounds; // 回合配置（含全局与每回合列表）
         public int lives;
         public int startMoney;
@@ -119,6 +121,48 @@ namespace TD.Config
         public float y;
         public float z;
         public string type; // ground
+    }
+
+    [Serializable]
+    public class TerrainConfig
+    {
+        public string @default; // grass/soil
+        public TerrainFromPath fromPath; // 从路径派生土地
+        public List<TerrainOverride> overrides; // 可选覆盖区（rect）
+    }
+
+    [Serializable]
+    public class TerrainFromPath
+    {
+        public bool enabled = true;
+        public float widthInCells = 1.5f; // 道路半宽=width/2
+    }
+
+    [Serializable]
+    public class TerrainOverride
+    {
+        public string type; // grass/soil
+        public RectIntConfig rect; // 基于网格的矩形区域
+    }
+
+    [Serializable]
+    public class RectIntConfig
+    {
+        public int x;
+        public int z;
+        public int w;
+        public int h;
+    }
+
+    [Serializable]
+    public class PropConfig
+    {
+        public string type; // rock 等
+        public float x;
+        public float y;
+        public float z;
+        public float rotY; // 可选
+        public float scale = 1f; // 可选
     }
 
     [Serializable]
