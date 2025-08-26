@@ -48,7 +48,7 @@
 - UpdateDriver：在一个 MonoBehaviour 中集中驱动各生命周期接口，避免分散 Update 带来的开销与时序复杂度
 
 ## 配置数据与可视化
-- JsonModels：Elements/Towers/Enemies/Level（含 Grid、Path、BuildSlots、Waves）
+- JsonModels：Elements/Towers/Enemies/Level（含 Grid、Path、BuildSlots、Rounds）
 - StreamingAssetsJsonLoader：
   - Editor/PC：直接文件 IO
   - Android：UnityWebRequest 读取 StreamingAssets
@@ -117,7 +117,7 @@
 - 塔目标选择策略与 JSON 对齐（first/last/closest/strongest）
 - 元素克制计算接入（ElementsConfig → 伤害倍率）
 - 敌人数据映射（EnemiesConfig → HP/Speed/Bounty 实例化）
-- 波次刷怪系统（Waves 按路径定时生成）
+- 回合刷怪系统（Rounds 按数组顺序与间隔生成）
 - MapRenderer 美术替换与路径贴花/材质细化，网格装饰
 - 命中反馈：飘字/音效/特效（与池化结合）
 

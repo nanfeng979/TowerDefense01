@@ -33,7 +33,7 @@ namespace TD.Editor
                 EditorGUILayout.LabelField("Validation Summary", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Level", sum.levelId);
                 EditorGUILayout.LabelField("Elements/Towers/Enemies", $"{sum.elementsCount} / {sum.towersCount} / {sum.enemiesCount}");
-                EditorGUILayout.LabelField("Path/Slots/Waves", $"{sum.pathsCount} / {sum.buildSlotsCount} / {sum.wavesCount}");
+                EditorGUILayout.LabelField("Path/Slots/Rounds", $"{sum.pathsCount} / {sum.buildSlotsCount} / {sum.roundsCount}");
                 EditorGUILayout.LabelField("Issues", sum.issuesCount.ToString());
                 EditorGUILayout.LabelField("Last Checked", sum.lastCheckedAt);
             }

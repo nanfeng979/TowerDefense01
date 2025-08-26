@@ -124,7 +124,7 @@
 
 ---
 
-## 4. 关卡与波次 level_001.json（单一路径、每波奖励）
+## 4. 关卡与回合（rounds）level_001.json（单一路径、每回合奖励）
 ```json
 {
   "version": 1,
@@ -154,34 +154,14 @@
     { "x": 10, "y": 0, "z": 7,  "type": "ground" },
     { "x": 14, "y": 0, "z": 7,  "type": "ground" }
   ],
-  "waves": [
-    {
-      "wave": 1,
-      "startTime": 0.0,
-      "reward": 20,
-      "groups": [
-  { "enemyId": "grunt",  "count": 8,  "spawnInterval": 0.8 }
-      ]
-    },
-    {
-      "wave": 2,
-      "startTime": 12.0,
-      "reward": 25,
-      "groups": [
-  { "enemyId": "grunt",  "count": 6,  "spawnInterval": 0.7 },
-  { "enemyId": "runner", "count": 5,  "spawnInterval": 0.6, "delay": 2.0 }
-      ]
-    },
-    {
-      "wave": 3,
-      "startTime": 26.0,
-      "reward": 40,
-      "groups": [
-  { "enemyId": "tank",   "count": 3,  "spawnInterval": 1.5 },
-  { "enemyId": "runner", "count": 6,  "spawnInterval": 0.6, "delay": 3.0 }
-      ]
-    }
-  ],
+  "rounds": {
+    "global": { "spawnInterval": 0.8, "roundInterval": 10.0 },
+    "list": [
+      { "round": 1, "reward": 20, "enemies": ["grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt"] },
+      { "round": 2, "reward": 25, "enemies": ["grunt","grunt","grunt","grunt","runner","runner","runner","runner","runner"], "spawnInterval": 0.7 },
+      { "round": 3, "reward": 40, "enemies": ["tank","tank","tank","runner","runner","runner","runner","runner","runner"] }
+    ]
+  },
   "lives": 20,
   "startMoney": 100
 }
@@ -194,11 +174,9 @@
 - path.waypoints：折线 Waypoints（世界坐标或关卡局部坐标，建议使用关卡局部）。
 - path：单条敌方行进路径；刷怪默认从第一个 waypoint 出生。
 - buildSlots：允许建塔的离散格位坐标（不在路径上，且不阻断路径），并用 `type` 区分建造点类型（目前仅支持 `ground`）。
-- waves：
-  - `wave`：序号；`startTime`：该波起始时间（相对关卡开始）。
-  - `groups`：本波内多个出怪组，按 `delay`（可选）相对本波开始的延迟触发。
-  - `spawnInterval`：该组内相邻单位的间隔。
-  - `reward`：该波清算奖励（金币）。
+- rounds：
+  - `global`：全局生成间隔 `spawnInterval` 与回合间隔 `roundInterval`
+  - `list[]`：每回合配置；字段：`round` 序号、`reward` 奖励、`enemies` 敌人类型数组（按顺序生成）、可选 `spawnInterval`（覆盖本回合生成间隔）
 - 经济与生命：`startMoney` 初始金币；`lives` 玩家生命数。
 
 ---
@@ -213,3 +191,14 @@ finalDamage = baseDamage * elementMultiplier(attacker, defender)
 ---
 
 请审阅以上草案：若认可我将据此生成示例 JSON 文件与加载器接口定义；若需调整，请标注字段或提供偏好，我会更新草案并记录变更。
+
+---
+
+附：waves → rounds 迁移说明（v2025-08-26）
+- 旧：`waves[]`（含 startTime、groups[count,enemyId,spawnInterval,delay]）
+- 新：`rounds { global{spawnInterval,roundInterval}, list[{round,reward,enemies[],spawnInterval?}] }`
+- 迁移：
+  1) 删除 `waves`，新增 `rounds` 节点
+  2) 将每个波的敌人展开为回合 `enemies` 数组；组内 `count` → 重复 N 次该 `enemyId`
+  3) 组/波的 `spawnInterval` 迁到 round.spawnInterval 或 rounds.global.spawnInterval
+  4) `startTime` 由 `roundInterval` 控制相邻回合间隔（或在 Spawner 中自定义）

@@ -31,7 +31,7 @@ namespace TD.Core
             public int enemiesCount;
             public int pathsCount;
             public int buildSlotsCount;
-            public int wavesCount;
+            public int roundsCount;
             public int issuesCount;
             public string lastCheckedAt; // ISO8601
         }
@@ -89,16 +89,16 @@ namespace TD.Core
                 var level = _level ?? await _config.GetLevelAsync(levelId);
 
                 var issuesList = new System.Collections.Generic.List<string>();
-                if (level?.waves != null)
+                if (level?.rounds?.list != null)
                 {
-                    foreach (var w in level.waves)
+                    foreach (var r in level.rounds.list)
                     {
-                        if (w.groups == null) continue;
-                        foreach (var g in w.groups)
+                        if (r.enemies == null) continue;
+                        foreach (var id in r.enemies)
                         {
-                            bool enemyExists = enemies.enemies.Exists(e => e.id == g.enemyId);
+                            bool enemyExists = enemies.enemies.Exists(e => e.id == id);
                             if (!enemyExists)
-                                issuesList.Add($"Enemy not found: {g.enemyId} (wave {w.wave})");
+                                issuesList.Add($"Enemy not found: {id} (round {r.round})");
                         }
                     }
                 }
@@ -111,7 +111,7 @@ namespace TD.Core
                     enemiesCount = enemies?.enemies?.Count ?? 0,
                     pathsCount = level?.path != null ? 1 : 0,
                     buildSlotsCount = level?.buildSlots?.Count ?? 0,
-                    wavesCount = level?.waves?.Count ?? 0,
+                    roundsCount = level?.rounds?.list?.Count ?? 0,
                     issuesCount = issuesList.Count,
                     lastCheckedAt = System.DateTime.Now.ToString("s")
                 };

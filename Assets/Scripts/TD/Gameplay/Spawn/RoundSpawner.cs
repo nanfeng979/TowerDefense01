@@ -10,10 +10,10 @@ using TD.Common.Pooling;
 namespace TD.Gameplay.Spawn
 {
     /// <summary>
-    /// 从 LevelConfig 读取 waves，按时间与组内间隔逐个生成敌人。
+    /// 从 LevelConfig.rounds 读取回合：按数组顺序生成敌人，使用全局/本回合 spawnInterval；回合间等待 roundInterval。
     /// 需在 Inspector 将 enemyId 映射到对应的敌人 Prefab。
     /// </summary>
-    public class WaveSpawner : MonoBehaviour
+    public class RoundSpawner : MonoBehaviour
     {
         [Header("Config")]
         public string levelId = "001";
@@ -43,19 +43,19 @@ namespace TD.Gameplay.Spawn
             if (!Application.isPlaying) { enabled = false; return; }
             if (!ServiceContainer.Instance.TryGet<IConfigService>(out _config))
             {
-                Debug.LogError("[WaveSpawner] IConfigService not found. Ensure Bootstrapper exists.");
+                Debug.LogError("[RoundSpawner] IConfigService not found. Ensure Bootstrapper exists.");
                 enabled = false; return;
             }
             if (!ServiceContainer.Instance.TryGet<PoolService>(out _poolService))
             {
-                Debug.LogError("[WaveSpawner] PoolService not found. Ensure Bootstrapper exists.");
+                Debug.LogError("[RoundSpawner] PoolService not found. Ensure Bootstrapper exists.");
                 enabled = false; return;
             }
 
             _level = await _config.GetLevelAsync(levelId);
             if (_level == null)
             {
-                Debug.LogError($"[WaveSpawner] Level not found: {levelId}");
+                Debug.LogError($"[RoundSpawner] Level not found: {levelId}");
                 enabled = false; return;
             }
 
@@ -86,41 +86,32 @@ namespace TD.Gameplay.Spawn
         private async Task RunWavesAsync(CancellationToken token)
         {
             if (_running) return; _running = true;
-            float startTime = Time.time;
-
-            // 按 LevelConfig.waves 的 startTime 排序
-            var waves = _level.waves != null ? _level.waves.OrderBy(w => w.startTime).ToList() : new List<WaveConfig>();
-            foreach (var w in waves)
+            var rounds = _level.rounds;
+            var list = rounds != null && rounds.list != null ? rounds.list.OrderBy(r => r.round).ToList() : new List<RoundConfig>();
+            float defaultSpawnInterval = rounds != null && rounds.global != null ? Mathf.Max(0f, rounds.global.spawnInterval) : 0.8f;
+            float roundInterval = rounds != null && rounds.global != null ? Mathf.Max(0f, rounds.global.roundInterval) : 0f;
+            foreach (var r in list)
             {
-                // 等待到该波开始时间
-                float wait = Mathf.Max(0f, w.startTime - (Time.time - startTime));
-                if (wait > 0f)
+                float spawnInterval = r.spawnInterval > 0f ? r.spawnInterval : defaultSpawnInterval;
+                await SpawnRoundAsync(r, spawnInterval, token);
+                // TODO: 发放奖励 r.reward
+                if (!ReferenceEquals(r, list.Last()) && roundInterval > 0f)
                 {
-                    try { await Task.Delay((int)(wait * 1000), token); } catch { return; }
+                    try { await Task.Delay((int)(roundInterval * 1000), token); } catch { return; }
                 }
-
-                // 对每个组并行调度（组内按 spawnInterval 串行）
-                var groupTasks = new List<Task>();
-                foreach (var g in w.groups)
-                {
-                    groupTasks.Add(SpawnGroupAsync(g, token));
-                }
-                try { await Task.WhenAll(groupTasks); } catch { return; }
-
-                // TODO: 可在此处发放奖励 w.reward
             }
             _running = false;
         }
 
-        private async Task SpawnGroupAsync(SpawnGroup g, CancellationToken token)
+        private async Task SpawnRoundAsync(RoundConfig r, float spawnInterval, CancellationToken token)
         {
-            if (g == null || g.count <= 0) return;
+            if (r == null || r.enemies == null || r.enemies.Count == 0) return;
 
             // 单一路径
             var path = _level.path;
             if (path == null || path.waypoints == null || path.waypoints.Count == 0)
             {
-                Debug.LogWarning($"[WaveSpawner] Level.path missing or empty");
+                Debug.LogWarning($"[RoundSpawner] Level.path missing or empty");
                 return;
             }
 
@@ -136,33 +127,27 @@ namespace TD.Gameplay.Spawn
             Vector3 spawnPos = waypoints[0];
             Quaternion spawnRot = Quaternion.LookRotation((waypoints.Count > 1 ? (waypoints[1] - spawnPos) : Vector3.forward).normalized, Vector3.up);
 
-            if (g.delay > 0f)
+            foreach (var enemyId in r.enemies)
             {
-                try { await Task.Delay((int)(g.delay * 1000), token); } catch { return; }
-            }
-
-            string key = poolKeyPrefix + g.enemyId;
-            if (!_pools.TryGetValue(key, out var pool))
-            {
-                if (!_prefabMap.TryGetValue(g.enemyId, out var prefab) || prefab == null)
+                string key = poolKeyPrefix + enemyId;
+                if (!_pools.TryGetValue(key, out var pool))
                 {
-                    Debug.LogWarning($"[WaveSpawner] Prefab not mapped for enemyId: {g.enemyId}");
-                    return;
+                    if (!_prefabMap.TryGetValue(enemyId, out var prefab) || prefab == null)
+                    {
+                        Debug.LogWarning($"[RoundSpawner] Prefab not mapped for enemyId: {enemyId}");
+                        continue;
+                    }
+                    pool = _poolService.GetOrCreate(key, prefab, enemiesRoot, prewarm: 0);
+                    _pools[key] = pool;
                 }
-                pool = _poolService.GetOrCreate(key, prefab, enemiesRoot, prewarm: 0);
-                _pools[key] = pool;
-            }
 
-            for (int i = 0; i < g.count; i++)
-            {
                 var go = pool.Spawn(spawnPos, spawnRot);
-                // 设置 EnemyMover 的路径（由其在 Start 中按 cellSize 加载路径）
                 var mover = go.GetComponent<TD.Gameplay.Enemy.EnemyMover>();
-                if (mover != null) { mover.levelId = levelId; /* 单路径下 mover 只需 levelId 即可 */ }
+                if (mover != null) { mover.levelId = levelId; }
 
-                if (i < g.count - 1 && g.spawnInterval > 0f)
+                if (!ReferenceEquals(enemyId, r.enemies.Last()) && spawnInterval > 0f)
                 {
-                    try { await Task.Delay((int)(g.spawnInterval * 1000), token); } catch { return; }
+                    try { await Task.Delay((int)(spawnInterval * 1000), token); } catch { return; }
                 }
             }
         }

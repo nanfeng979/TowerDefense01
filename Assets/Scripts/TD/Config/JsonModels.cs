@@ -80,7 +80,7 @@ namespace TD.Config
         public GridConfig grid;
         public PathConfig path;
         public List<BuildSlot> buildSlots;
-        public List<WaveConfig> waves;
+        public RoundsContainer rounds; // 回合配置（含全局与每回合列表）
         public int lives;
         public int startMoney;
     }
@@ -122,21 +122,25 @@ namespace TD.Config
     }
 
     [Serializable]
-    public class WaveConfig
+    public class RoundsContainer
     {
-        public int wave;
-        public float startTime;
-        public int reward;
-        public List<SpawnGroup> groups;
+        public RoundsGlobal global;
+        public List<RoundConfig> list; // 每回合配置数组
     }
 
     [Serializable]
-    public class SpawnGroup
+    public class RoundsGlobal
     {
-        public string enemyId;
-        public int count;
-        public float spawnInterval;
-        public float delay; // optional, JsonUtility 默认值 0 即未设置
-                            // 单路径模式，移除 pathId
+        public float spawnInterval; // 敌人与敌人之间默认间隔（秒）
+        public float roundInterval; // 回合之间默认间隔（秒）
+    }
+
+    [Serializable]
+    public class RoundConfig
+    {
+        public int round;        // 回合序号
+        public int reward;       // 该回合奖励
+        public List<string> enemies; // 按顺序生成的敌人类型数组，例如 ["grunt","grunt","tank"]
+        public float spawnInterval;  // 可选：覆盖本回合的生成间隔（0 表示使用 global.spawnInterval）
     }
 }
