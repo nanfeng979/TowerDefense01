@@ -19,6 +19,16 @@ namespace TD.Gameplay.Map
         public bool clearBeforeGenerate = true;
         public float yOffset = 0f;
 
+        public enum StrategySelection
+        {
+            Auto,
+            NewTerrain,
+            LegacyTiles
+        }
+        [Header("Strategy")]
+        [Tooltip("选择渲染策略：Auto 根据资源/配置自动判断；NewTerrain 使用新地形掩码/terrainMap；LegacyTiles 使用旧瓦片渲染")] 
+        public StrategySelection strategy = StrategySelection.Auto;
+
         [Header("Prefabs / Materials")]
         [Tooltip("地面格子预制体（建议 1x1 XZ 单位大小）")] public GameObject groundTilePrefab; // 旧方案：整格地面
         [Tooltip("路径瓦片预制体（建议 1x1 XZ 单位大小）。留空则不单独渲染路径")] public GameObject pathTilePrefab; // 旧方案：路径瓦片
@@ -85,11 +95,21 @@ namespace TD.Gameplay.Map
             }
 
             EnsureRoots();
-            // 选择并调用渲染策略（直接类型绑定）
-            bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null || _level.terrainMap != null);
-            IMapTerrainRenderer renderer = useNewTerrain
-                ? (IMapTerrainRenderer)new TerrainMaskRenderer()
-                : new LegacyTilesRenderer();
+            // 选择并调用渲染策略（直接类型绑定 + 可强制）
+            IMapTerrainRenderer renderer;
+            switch (strategy)
+            {
+                case StrategySelection.NewTerrain:
+                    renderer = new TerrainMaskRenderer();
+                    break;
+                case StrategySelection.LegacyTiles:
+                    renderer = new LegacyTilesRenderer();
+                    break;
+                default:
+                    bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null || _level.terrainMap != null);
+                    renderer = useNewTerrain ? (IMapTerrainRenderer)new TerrainMaskRenderer() : new LegacyTilesRenderer();
+                    break;
+            }
             renderer.Render(this, _level);
             RenderSlots();
             RenderProps();

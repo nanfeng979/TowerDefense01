@@ -44,12 +44,15 @@ namespace TD.Gameplay.Bullet
 
         private void OnTriggerEnter(Collider other)
         {
-            var dmg = other.GetComponent<IDamageable>();
-            if (dmg != null)
-            {
-                dmg.Damage(damage);
-                _onDespawn?.Invoke(this);
-            }
+            // 只对敌人造成伤害：需要 EnemyAgent + IDamageable
+            var enemyAgent = other.GetComponentInParent<TD.Gameplay.Enemy.EnemyAgent>();
+            if (enemyAgent == null) return;
+
+            var dmg = other.GetComponent<IDamageable>() ?? enemyAgent.GetComponent<IDamageable>();
+            if (dmg == null) return;
+
+            dmg.Damage(damage);
+            _onDespawn?.Invoke(this);
         }
     }
 }
