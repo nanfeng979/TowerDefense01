@@ -81,6 +81,7 @@ namespace TD.Config
         public PathConfig path;
         public List<BuildSlot> buildSlots;
         public TerrainConfig terrain; // 地表配置（默认草地、路径生成土地、覆盖区）
+    public TerrainMapConfig terrainMap; // 字符网格驱动的地形映射（优先于 terrain）
         public List<PropConfig> props; // 环境物件（岩石等）
         public RoundsContainer rounds; // 回合配置（含全局与每回合列表）
         public int lives;
@@ -163,6 +164,21 @@ namespace TD.Config
         public float z;
         public float rotY; // 可选
         public float scale = 1f; // 可选
+    }
+
+    [Serializable]
+    public class TerrainMapConfig
+    {
+        // 由于 JsonUtility 不支持 Dictionary，使用列表形式表示图例映射
+        public List<TerrainLegend> legend; // key: 单字符字符串，例如 "G"、"S"；type: grass/soil
+        public List<string> rows;          // 每行一个字符串，如 "AAABBB..."，长度建议等于 grid.width，总行数建议等于 grid.height
+    }
+
+    [Serializable]
+    public class TerrainLegend
+    {
+        public string key;   // 单字符
+        public string type;  // grass/soil
     }
 
     [Serializable]

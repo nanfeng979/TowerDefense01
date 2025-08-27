@@ -17,61 +17,88 @@ namespace TD.Gameplay.Map.Rendering
 
             owner.EnsureExtraRoots();
 
-            // 初始类型
-            string defaultType = _level.terrain != null && !string.IsNullOrEmpty(_level.terrain.@default)
-                ? _level.terrain.@default.ToLowerInvariant()
-                : "grass";
             var cellType = new string[w, h];
-            for (int x = 0; x < w; x++)
-                for (int z = 0; z < h; z++)
-                    cellType[x, z] = defaultType;
-
-            // 路径派生
-            if (_level.path != null && _level.path.waypoints != null && _level.path.waypoints.Count > 1)
+            // 1) 若存在字符网格 terrainMap，则优先使用它
+            if (_level.terrainMap != null && _level.terrainMap.rows != null && _level.terrainMap.rows.Count > 0)
             {
-                bool fromPathEnabled = _level.terrain == null || _level.terrain.fromPath == null ? true : _level.terrain.fromPath.enabled;
-                float pathWidthCells = _level.terrain != null && _level.terrain.fromPath != null ? _level.terrain.fromPath.widthInCells : 1.5f;
-                float halfWidth = Mathf.Max(0.05f, pathWidthCells * cs * 0.5f);
-                if (fromPathEnabled)
+                var legend = new System.Collections.Generic.Dictionary<char, string>();
+                if (_level.terrainMap.legend != null)
                 {
-                    var wp = _level.path.waypoints;
-                    var worldPts = new List<Vector3>(wp.Count);
-                    for (int i = 0; i < wp.Count; i++)
+                    foreach (var entry in _level.terrainMap.legend)
                     {
-                        var v = wp[i].ToVector3();
-                        worldPts.Add(new Vector3(v.x * cs, v.y, v.z * cs));
+                        if (entry == null || string.IsNullOrEmpty(entry.key) || string.IsNullOrEmpty(entry.type)) continue;
+                        char k = entry.key[0];
+                        legend[k] = entry.type.ToLowerInvariant();
                     }
+                }
+                for (int z = 0; z < h; z++)
+                {
+                    string row = z < _level.terrainMap.rows.Count ? _level.terrainMap.rows[z] : null;
                     for (int x = 0; x < w; x++)
                     {
-                        for (int z = 0; z < h; z++)
-                        {
-                            var p = new Vector3((x + 0.5f) * cs, 0f, (z + 0.5f) * cs);
-                            bool nearPath = false;
-                            for (int i = 0; i < worldPts.Count - 1 && !nearPath; i++)
-                            {
-                                float d = DistPointToSegmentXZ(p, worldPts[i], worldPts[i + 1]);
-                                if (d <= halfWidth) nearPath = true;
-                            }
-                            if (nearPath) cellType[x, z] = "soil";
-                        }
+                        char key = (row != null && x < (row?.Length ?? 0)) ? row[x] : ' ';
+                        if (!legend.TryGetValue(key, out var t)) t = "grass";
+                        cellType[x, z] = t;
                     }
                 }
             }
-
-            // overrides
-            if (_level.terrain != null && _level.terrain.overrides != null)
+            else
             {
-                foreach (var ov in _level.terrain.overrides)
+                // 2) 否则回退到：default + 路径派生 + overrides
+                string defaultType = _level.terrain != null && !string.IsNullOrEmpty(_level.terrain.@default)
+                    ? _level.terrain.@default.ToLowerInvariant()
+                    : "grass";
+                for (int x = 0; x < w; x++)
+                    for (int z = 0; z < h; z++)
+                        cellType[x, z] = defaultType;
+
+                // 路径派生
+                if (_level.path != null && _level.path.waypoints != null && _level.path.waypoints.Count > 1)
                 {
-                    if (ov == null || ov.rect == null || string.IsNullOrEmpty(ov.type)) continue;
-                    string t = ov.type.ToLowerInvariant();
-                    int x0 = Mathf.Max(0, ov.rect.x);
-                    int z0 = Mathf.Max(0, ov.rect.z);
-                    int x1 = Mathf.Min(w, ov.rect.x + ov.rect.w);
-                    int z1 = Mathf.Min(h, ov.rect.z + ov.rect.h);
-                    for (int x = x0; x < x1; x++)
-                        for (int z = z0; z < z1; z++)
-                            cellType[x, z] = t;
+                    bool fromPathEnabled = _level.terrain == null || _level.terrain.fromPath == null ? true : _level.terrain.fromPath.enabled;
+                    float pathWidthCells = _level.terrain != null && _level.terrain.fromPath != null ? _level.terrain.fromPath.widthInCells : 1.5f;
+                    float halfWidth = Mathf.Max(0.05f, pathWidthCells * cs * 0.5f);
+                    if (fromPathEnabled)
+                    {
+                        var wp = _level.path.waypoints;
+                        var worldPts = new List<Vector3>(wp.Count);
+                        for (int i = 0; i < wp.Count; i++)
+                        {
+                            var v = wp[i].ToVector3();
+                            worldPts.Add(new Vector3(v.x * cs, v.y, v.z * cs));
+                        }
+                        for (int x = 0; x < w; x++)
+                        {
+                            for (int z = 0; z < h; z++)
+                            {
+                                var p = new Vector3((x + 0.5f) * cs, 0f, (z + 0.5f) * cs);
+                                bool nearPath = false;
+                                for (int i = 0; i < worldPts.Count - 1 && !nearPath; i++)
+                                {
+                                    float d = DistPointToSegmentXZ(p, worldPts[i], worldPts[i + 1]);
+                                    if (d <= halfWidth) nearPath = true;
+                                }
+                                if (nearPath) cellType[x, z] = "soil";
+                            }
+                        }
+                    }
+                }
+
+                // overrides
+                if (_level.terrain != null && _level.terrain.overrides != null)
+                {
+                    foreach (var ov in _level.terrain.overrides)
+                    {
+                        if (ov == null || ov.rect == null || string.IsNullOrEmpty(ov.type)) continue;
+                        string t = ov.type.ToLowerInvariant();
+                        int x0 = Mathf.Max(0, ov.rect.x);
+                        int z0 = Mathf.Max(0, ov.rect.z);
+                        int x1 = Mathf.Min(w, ov.rect.x + ov.rect.w);
+                        int z1 = Mathf.Min(h, ov.rect.z + ov.rect.h);
+                        for (int x = x0; x < x1; x++)
+                            for (int z = z0; z < z1; z++)
+                                cellType[x, z] = t;
+                    }
                 }
             }
 
@@ -87,6 +114,7 @@ namespace TD.Gameplay.Map.Rendering
                     if (prefab == null) continue;
 
                     var go = UnityEngine.Object.Instantiate(prefab, owner.terrainRoot);
+                    go.SetActive(true);
                     go.transform.localPosition = new Vector3(x * cs, owner.yOffset, z * cs);
                     var s = go.transform.localScale;
                     go.transform.localScale = new Vector3(cs, s.y, cs);
@@ -107,6 +135,7 @@ namespace TD.Gameplay.Map.Rendering
                     }
                     if (prefab == null) continue;
                     var go = UnityEngine.Object.Instantiate(prefab, owner.propsRoot);
+                    go.SetActive(true);
                     go.transform.localPosition = new Vector3(p.x * cs, p.y + owner.yOffset, p.z * cs);
                     go.transform.localRotation = Quaternion.Euler(0f, p.rotY, 0f);
                     go.transform.localScale = Vector3.one * (p.scale <= 0f ? 1f : p.scale);

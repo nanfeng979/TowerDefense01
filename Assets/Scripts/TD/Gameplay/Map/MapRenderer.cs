@@ -86,7 +86,7 @@ namespace TD.Gameplay.Map
 
             EnsureRoots();
             // 选择并调用渲染策略（直接类型绑定）
-            bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null);
+            bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null || _level.terrainMap != null);
             IMapTerrainRenderer renderer = useNewTerrain
                 ? (IMapTerrainRenderer)new TerrainMaskRenderer()
                 : new LegacyTilesRenderer();
