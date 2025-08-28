@@ -84,6 +84,7 @@ namespace TD.Config
     public TerrainMapConfig terrainMap; // 字符网格驱动的地形映射（优先于 terrain）
         public List<PropConfig> props; // 环境物件（岩石等）
         public RoundsContainer rounds; // 回合配置（含全局与每回合列表）
+    public RuneSelectionConfig runes; // 符文系统配置（池、选择策略等）
         public int lives;
         public int startMoney;
     }
@@ -202,5 +203,42 @@ namespace TD.Config
         public int reward;       // 该回合奖励
         public List<string> enemies; // 按顺序生成的敌人类型数组，例如 ["grunt","grunt","tank"]
         public float spawnInterval;  // 可选：覆盖本回合的生成间隔（0 表示使用 global.spawnInterval）
+        public bool offerRunes;      // 回合结束后是否提供符文选择
+        public string rarity;        // 本轮符文稀有度（Common/Rare/Epic）；为空则由全局默认决定
     }
+
+    #region Runes
+    [Serializable]
+    public class RuneSelectionConfig
+    {
+        public List<string> poolIds;     // 可用符文池（引用独立符文 JSON 的 id）
+        public bool pauseOnSelection = true; // 弹出选择时是否暂停时间
+        public bool useRandomSeed = false;   // 是否使用固定种子
+        public int randomSeed = 0;           // 固定种子（useRandomSeed=true 时生效）
+        public string defaultRarity = "Common"; // 未在回合上显式指定时的默认稀有度
+    public bool autoDowngradeRarity = true;   // 候选不足 3 时按稀有度降级补足（Epic→Rare→Common）
+    public bool skipIfInsufficient = true;    // 降级后仍不足 3，则跳过本轮不出现选择
+    }
+
+    [Serializable]
+    public class RuneDef
+    {
+        public string id;       // 唯一 id（与文件名可一致）
+        public string name;     // 展示名
+        public string rarity;   // Common/Rare/Epic
+        public string description; // 描述（可选）
+        public List<RuneEffectDef> effects; // 该符文包含的一个或多个效果
+        public string icon;     // 图标路径或资源名（可选）
+    }
+
+    [Serializable]
+    public class RuneEffectDef
+    {
+        public string target;     // 作用目标："Tower" 或 "Enemy"
+        public string attribute;  // 属性："range"/"damage"/"moveSpeed"
+        public string operation;  // 运算："add" 或 "mult"
+        public float value;       // 数值：例如 +1 / -1 / 1.1 / 1.2
+        public string applyMode;  // 应用模式："global" 或 "perEnemyDebuff"（敌人减速首选 perEnemyDebuff）
+    }
+    #endregion
 }

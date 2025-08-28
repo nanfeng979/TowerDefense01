@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using TD.Config;
-using TD.Core;
 using TD.Common.Pooling;
 
 namespace TD.Gameplay.Spawn
@@ -31,7 +30,8 @@ namespace TD.Gameplay.Spawn
         public List<EnemyPrefab> enemyPrefabs = new List<EnemyPrefab>();
 
         private IConfigService _config;
-        private PoolService _poolService;
+        private TD.Core.PoolService _poolService;
+        private TD.Core.RunesService _runesService;
         private Dictionary<string, GameObjectPool> _pools;
         private Dictionary<string, GameObject> _prefabMap;
         private LevelConfig _level;
@@ -41,12 +41,12 @@ namespace TD.Gameplay.Spawn
         private async void Start()
         {
             if (!Application.isPlaying) { enabled = false; return; }
-            if (!ServiceContainer.Instance.TryGet<IConfigService>(out _config))
+            if (!TD.Core.ServiceContainer.Instance.TryGet<IConfigService>(out _config))
             {
                 Debug.LogError("[RoundSpawner] IConfigService not found. Ensure Bootstrapper exists.");
                 enabled = false; return;
             }
-            if (!ServiceContainer.Instance.TryGet<PoolService>(out _poolService))
+            if (!TD.Core.ServiceContainer.Instance.TryGet<TD.Core.PoolService>(out _poolService))
             {
                 Debug.LogError("[RoundSpawner] PoolService not found. Ensure Bootstrapper exists.");
                 enabled = false; return;
@@ -57,6 +57,13 @@ namespace TD.Gameplay.Spawn
             {
                 Debug.LogError($"[RoundSpawner] Level not found: {levelId}");
                 enabled = false; return;
+            }
+
+            // 通知 RunesService 当前关卡（用于读取 runes 配置与种子）
+            TD.Core.ServiceContainer.Instance.TryGet<TD.Core.RunesService>(out _runesService);
+            if (_runesService != null)
+            {
+                await _runesService.SetLevelAsync(_level);
             }
 
             // 构建映射
@@ -94,7 +101,15 @@ namespace TD.Gameplay.Spawn
             {
                 float spawnInterval = r.spawnInterval > 0f ? r.spawnInterval : defaultSpawnInterval;
                 await SpawnRoundAsync(r, spawnInterval, token);
-                // TODO: 发放奖励 r.reward
+                // 等待清场：所有敌人被消灭
+                while (!token.IsCancellationRequested && TD.Gameplay.Enemy.EnemyRegistry.All.Count > 0)
+                {
+                    try { await Task.Delay(100, token); } catch { return; }
+                }
+                // 发放奖励并广播 RoundRewardGranted，然后广播 RoundEnded
+                TD.Core.GameEvents.RaiseRoundRewardGranted(r.reward);
+                TD.Core.GameEvents.RaiseRoundEnded(r.round);
+                // 回合间隔（非最后一波）
                 if (!ReferenceEquals(r, list.Last()) && roundInterval > 0f)
                 {
                     try { await Task.Delay((int)(roundInterval * 1000), token); } catch { return; }
@@ -144,6 +159,12 @@ namespace TD.Gameplay.Spawn
                 var go = pool.Spawn(spawnPos, spawnRot);
                 var mover = go.GetComponent<TD.Gameplay.Enemy.EnemyMover>();
                 if (mover != null) { mover.levelId = levelId; }
+                // 敌人生成后广播 EnemySpawned(agent)
+                var agent = go.GetComponent<TD.Gameplay.Enemy.EnemyAgent>();
+                if (agent != null)
+                {
+                    TD.Core.GameEvents.RaiseEnemySpawned(agent);
+                }
 
                 if (!ReferenceEquals(enemyId, r.enemies.Last()) && spawnInterval > 0f)
                 {

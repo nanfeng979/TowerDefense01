@@ -47,6 +47,19 @@ namespace TD.Core
                     PoolService poolService = new PoolService();
                     container.Register<PoolService>(poolService);
                 }
+                // 注册 StatService / RunesService（符文系统）
+                if (!container.IsRegistered<StatService>())
+                {
+                    var statService = new StatService();
+                    container.Register<StatService>(statService);
+                }
+                if (!container.IsRegistered<RunesService>())
+                {
+                    var runesService = new RunesService();
+                    container.Register<RunesService>(runesService);
+                }
+
+                // 如需符文选择界面，请在场景中添加 TD.UI.RuneSelectionUI 组件
 
                 // 初始化与注册生命周期接口
                 foreach (var service in container.GetAllServices())

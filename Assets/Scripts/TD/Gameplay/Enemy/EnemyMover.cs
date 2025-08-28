@@ -41,7 +41,24 @@ namespace TD.Gameplay.Enemy
         private void Update()
         {
             if (_waypoints == null || _waypoints.Count == 0) return;
-            if (_index >= _waypoints.Count - 1) return;
+            if (_index >= _waypoints.Count - 1) 
+            {
+                // 敌人到达终点，扣除生命值（简化实现）
+                Debug.Log("敌人到达终点！");
+                
+                // 移除自己
+                var pool = TD.Core.ServiceContainer.Instance.Get<TD.Core.PoolService>();
+                if (pool != null)
+                {
+                    // 尝试回到池中
+                    gameObject.SetActive(false);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
 
             var target = _waypoints[_index + 1];
             var pos = transform.position;

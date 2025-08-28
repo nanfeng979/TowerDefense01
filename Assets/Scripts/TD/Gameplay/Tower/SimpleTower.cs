@@ -15,6 +15,9 @@ namespace TD.Gameplay.Tower
         public float fireRate = 1.5f;
         public GameObject bulletPrefab;
         public string poolKey = "tower_bullet";
+    [Header("Stats")]
+    [Tooltip("是否使用 StatService 的全局加成")]
+    public bool useGlobalStats = true;
 
         [Header("Obstruction Check")]
         [Tooltip("发射前检测射线是否被其他防御塔阻挡（避免子弹打到己方塔）")] public bool checkLineOfFire = true;
@@ -48,6 +51,8 @@ namespace TD.Gameplay.Tower
         private float _lastRange = -1f;
         private bool _pendingShot = false; // 冷却完成后置为 true，直到真正发射才复位
         private RaycastHit[] _hitsBuf;
+    private StatService _stats;
+    private float _baseBulletDamage = -1f;
 
         private void Start()
         {
@@ -59,6 +64,13 @@ namespace TD.Gameplay.Tower
             }
             _pool = poolSvc.GetOrCreate(poolKey, bulletPrefab, transform, prewarm: 8);
             _hitsBuf = new RaycastHit[Mathf.Max(4, obstructionMaxHits)];
+            ServiceContainer.Instance.TryGet<StatService>(out _stats);
+            // 记录子弹基础伤害（来自预制体）
+            if (bulletPrefab != null)
+            {
+                var bc = bulletPrefab.GetComponent<BulletComponent>();
+                if (bc != null) _baseBulletDamage = bc.damage;
+            }
 
             EnsureRangeRenderer();
             UpdateRangeRenderer();
@@ -70,7 +82,8 @@ namespace TD.Gameplay.Tower
             // 动态更新范围可视化
             if (showRange)
             {
-                if (_rangeLR != null && (Mathf.Abs(_lastRange - range) > 0.001f || !_rangeLR.enabled))
+                float effectiveRangeNow = useGlobalStats && _stats != null ? (range + _stats.GetTowerRangeAdd()) * _stats.GetTowerRangeMult() : range;
+                if (_rangeLR != null && (Mathf.Abs(_lastRange - effectiveRangeNow) > 0.001f || !_rangeLR.enabled))
                 {
                     UpdateRangeRenderer();
                 }
@@ -87,8 +100,15 @@ namespace TD.Gameplay.Tower
                 _pendingShot = true;
             }
 
+            // 计算生效射程
+            float effectiveRange = range;
+            if (useGlobalStats && _stats != null)
+            {
+                effectiveRange = (range + _stats.GetTowerRangeAdd()) * _stats.GetTowerRangeMult();
+            }
+
             // 持续尝试：找到可攻击目标，且线路无阻挡时才发射
-            var target = EnemyRegistry.GetClosest(transform.position, range);
+            var target = EnemyRegistry.GetClosest(transform.position, effectiveRange);
             if (target == null) return; // 下一帧继续尝试
 
             var origin = transform.position + Vector3.up * rayStartHeight;
@@ -114,6 +134,11 @@ namespace TD.Gameplay.Tower
             if (bullet != null)
             {
                 bullet.Setup(OnBulletTimeout);
+                if (useGlobalStats && _stats != null)
+                {
+                    float baseDmg = _baseBulletDamage >= 0f ? _baseBulletDamage : bullet.damage;
+                    bullet.damage = Mathf.Max(0f, (baseDmg + _stats.GetTowerDamageAdd()) * _stats.GetTowerDamageMult());
+                }
             }
             // 真正发射后，重置冷却与待发射状态
             _timer = 0f;
@@ -197,7 +222,7 @@ namespace TD.Gameplay.Tower
             _rangeLR.startWidth = _rangeLR.endWidth = rangeLineWidth;
             _rangeLR.startColor = _rangeLR.endColor = rangeColor;
             var cnt = _rangeLR.positionCount;
-            float r = Mathf.Max(0.01f, range);
+            float r = Mathf.Max(0.01f, useGlobalStats && _stats != null ? (range + _stats.GetTowerRangeAdd()) * _stats.GetTowerRangeMult() : range);
             for (int i = 0; i < cnt; i++)
             {
                 float t = i / (float)cnt * Mathf.PI * 2f;
@@ -205,7 +230,7 @@ namespace TD.Gameplay.Tower
                 float z = Mathf.Sin(t) * r;
                 _rangeLR.SetPosition(i, new Vector3(x, rangeYOffset, z));
             }
-            _lastRange = range;
+            _lastRange = useGlobalStats && _stats != null ? (range + _stats.GetTowerRangeAdd()) * _stats.GetTowerRangeMult() : range;
         }
 
         private void EnsureShotRenderer()
