@@ -1,8 +1,8 @@
 {
   "id": "r_tower_range_x1_1",
-  "name": "Range +10%",
+  "name": "射程增强",
   "rarity": "Common",
-  "description": "+10% tower range (global)",
+  "description": "所有防御塔射程提升10%",
   "effects": [
     { "target": "Tower", "attribute": "range", "operation": "mult", "value": 1.1, "applyMode": "global" }
   ]

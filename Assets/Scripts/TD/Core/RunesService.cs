@@ -55,6 +55,7 @@ namespace TD.Core
             if (level != null && level.runes != null && level.runes.poolIds != null)
             {
                 _remainingPool.AddRange(level.runes.poolIds);
+                Debug.Log($"[RunesService] Initial pool size: {_remainingPool.Count}");
                 // RNG
                 if (level.runes.useRandomSeed)
                     _rng = new System.Random(level.runes.randomSeed);
@@ -68,13 +69,18 @@ namespace TD.Core
                     try
                     {
                         var def = await loader.LoadAsync<RuneDef>($"runes/{id}.json");
-                        if (def != null) _defs[id] = def;
+                        if (def != null) 
+                        {
+                            _defs[id] = def;
+                            Debug.Log($"[RunesService] Loaded rune: {def.name} ({def.rarity})");
+                        }
                     }
                     catch (Exception ex)
                     {
                         Debug.LogWarning($"[RunesService] Load rune failed for id={id}: {ex.Message}");
                     }
                 }
+                Debug.Log($"[RunesService] Loaded {_defs.Count} rune definitions");
             }
         }
 
@@ -86,50 +92,122 @@ namespace TD.Core
 
         private void OnRoundEnded(int round)
         {
-            if (_level == null || _cfg == null) return;
+            Debug.Log($"[RunesService] Round {round} ended");
+            if (_level == null || _cfg == null) 
+            {
+                Debug.Log($"[RunesService] Level or config is null - level: {_level != null}, cfg: {_cfg != null}");
+                return;
+            }
             var rc = _level.rounds?.list?.FirstOrDefault(x => x.round == round);
-            if (rc == null || !rc.offerRunes) return;
-
+            if (rc == null) 
+            {
+                Debug.Log($"[RunesService] Round config not found for round {round}");
+                return;
+            }
+            if (!rc.offerRunes) 
+            {
+                Debug.Log($"[RunesService] Round {round} does not offer runes");
+                return;
+            }
+            Debug.Log($"[RunesService] Round {round} should offer runes with rarity: {rc.rarity}");
             // 交给 UI 处理，UI 将调用 GetOffersForRound 和 ChooseRune
             // 这里只是一个钩子，实际 UI 在 RuneSelectionUI 中监听 RoundEnded。
         }
 
         /// <summary>
-        /// 获取某回合可供选择的 3 个（或 0 个）符文。遵循稀有度、降级与跳过策略。
+        /// 获取某回合可供选择的 3 个（或 0 个）符文。遵循稀有度、重置池与跳过策略。
         /// </summary>
         public List<RuneDef> GetOffersForRound(int round)
         {
-            if (_level == null || _cfg == null) return new List<RuneDef>();
+            Debug.Log($"[RunesService] GetOffersForRound called for round {round}");
+            if (_level == null || _cfg == null) 
+            {
+                Debug.Log($"[RunesService] Level or config is null in GetOffersForRound");
+                return new List<RuneDef>();
+            }
             var rc = _level.rounds?.list?.FirstOrDefault(x => x.round == round);
-            if (rc == null || !rc.offerRunes) return new List<RuneDef>();
+            if (rc == null || !rc.offerRunes) 
+            {
+                Debug.Log($"[RunesService] No valid round config or offerRunes is false for round {round}");
+                return new List<RuneDef>();
+            }
 
             var rarity = string.IsNullOrEmpty(rc.rarity) ? (_cfg.defaultRarity ?? "Common") : rc.rarity;
+            Debug.Log($"[RunesService] Target rarity: {rarity}, remaining pool count: {_remainingPool.Count}");
+            
             var tiers = new[] { "Epic", "Rare", "Common" }; // 从高到低
             int startIdx = Array.IndexOf(tiers, rarity);
             if (startIdx < 0) startIdx = Array.IndexOf(tiers, "Common");
 
             // 从剩余池中过滤当前稀有度
             List<string> pickPool = null;
+            string selectedTier = null;
+            
             for (int i = startIdx; i < tiers.Length; i++)
             {
                 var tier = tiers[i];
                 pickPool = _remainingPool.Where(id => _defs.TryGetValue(id, out var d) && d.rarity == tier).Distinct().ToList();
-                if (pickPool.Count >= 3) break;
+                Debug.Log($"[RunesService] Tier {tier} has {pickPool.Count} available runes in remaining pool");
+                
+                if (pickPool.Count >= 3) 
+                {
+                    selectedTier = tier;
+                    break;
+                }
+                
+                // 当前稀有度不足3个，尝试重置该稀有度的符文池
+                var allOfThisTier = _level.runes.poolIds.Where(id => _defs.TryGetValue(id, out var d) && d.rarity == tier).ToList();
+                Debug.Log($"[RunesService] Total {tier} runes in config: {allOfThisTier.Count}");
+                
+                if (allOfThisTier.Count >= 3)
+                {
+                    Debug.Log($"[RunesService] Resetting {tier} rune pool from {pickPool.Count} to {allOfThisTier.Count} runes");
+                    // 重置该稀有度的符文池
+                    ResetRarityPool(tier);
+                    pickPool = _remainingPool.Where(id => _defs.TryGetValue(id, out var d) && d.rarity == tier).Distinct().ToList();
+                    selectedTier = tier;
+                    break;
+                }
+                else if (allOfThisTier.Count < 2)
+                {
+                    Debug.LogWarning($"[RunesService] Warning: {tier} rarity has only {allOfThisTier.Count} runes configured. Recommend having at least 2 runes per rarity.");
+                }
+                
                 if (!_cfg.autoDowngradeRarity) break;
                 // 若允许降级则继续下一 tier
             }
 
             if (pickPool == null || pickPool.Count < 3)
             {
-                if (_cfg.skipIfInsufficient) return new List<RuneDef>();
-                // 如果不跳过，则尽力从所有剩余中随机挑到 3（无视稀有度），但保持不重复
+                Debug.Log($"[RunesService] Not enough runes after trying all tiers, pickPool count: {pickPool?.Count ?? 0}");
+                if (_cfg.skipIfInsufficient) 
+                {
+                    Debug.Log($"[RunesService] Skipping due to insufficient runes");
+                    return new List<RuneDef>();
+                }
+                // 如果不跳过，则尝试混合稀有度从所有剩余中随机挑选
                 pickPool = _remainingPool.Distinct().ToList();
+                Debug.Log($"[RunesService] Fallback to all remaining: {pickPool.Count} runes");
+                
+                // 如果仍然不足，尝试重复使用已选过的符文
+                if (pickPool.Count < 3)
+                {
+                    var allIds = _level.runes.poolIds.Where(id => _defs.ContainsKey(id)).ToList();
+                    Debug.Log($"[RunesService] Still not enough, using all available runes: {allIds.Count}");
+                    pickPool = allIds;
+                }
             }
 
-            if (pickPool.Count < 3) return new List<RuneDef>();
+            if (pickPool.Count < 3) 
+            {
+                Debug.Log($"[RunesService] Still not enough runes after fallback: {pickPool.Count}");
+                return new List<RuneDef>();
+            }
 
             var chosenIds = RandomDistinct(pickPool, 3);
-            return chosenIds.Select(id => _defs[id]).ToList();
+            var result = chosenIds.Select(id => _defs[id]).ToList();
+            Debug.Log($"[RunesService] Offering {result.Count} runes from {selectedTier ?? "mixed"}: {string.Join(", ", chosenIds)}");
+            return result;
         }
 
         /// <summary>
@@ -137,10 +215,16 @@ namespace TD.Core
         /// </summary>
         public void ChooseRune(string runeId)
         {
+            Debug.Log($"[RunesService] ChooseRune called with id: {runeId}");
             if (string.IsNullOrEmpty(runeId)) return;
-            if (!_defs.TryGetValue(runeId, out var def)) return;
+            if (!_defs.TryGetValue(runeId, out var def)) 
+            {
+                Debug.Log($"[RunesService] Rune definition not found for id: {runeId}");
+                return;
+            }
             // 从池中移除一次（若存在多次，可移除首个）
-            _remainingPool.Remove(runeId);
+            bool removed = _remainingPool.Remove(runeId);
+            Debug.Log($"[RunesService] Removed rune {runeId} from pool: {removed}, remaining pool size: {_remainingPool.Count}");
             ApplyRune(def);
         }
 
@@ -190,6 +274,28 @@ namespace TD.Core
                 list.RemoveAt(idx);
             }
             return result;
+        }
+
+        /// <summary>
+        /// 重置指定稀有度的符文池，将该稀有度的所有符文重新加入剩余池中。
+        /// </summary>
+        private void ResetRarityPool(string rarity)
+        {
+            if (_level?.runes?.poolIds == null) return;
+            
+            // 找到该稀有度的所有符文
+            var rarityRunes = _level.runes.poolIds.Where(id => _defs.TryGetValue(id, out var d) && d.rarity == rarity).ToList();
+            
+            // 重新添加到剩余池中（避免重复）
+            foreach (var runeId in rarityRunes)
+            {
+                if (!_remainingPool.Contains(runeId))
+                {
+                    _remainingPool.Add(runeId);
+                }
+            }
+            
+            Debug.Log($"[RunesService] Reset {rarity} pool: added {rarityRunes.Count} runes back to pool");
         }
 
         private void ApplyEnemySpeed(EnemyAgent agent)

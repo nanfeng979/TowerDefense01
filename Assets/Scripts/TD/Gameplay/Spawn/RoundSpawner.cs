@@ -107,6 +107,7 @@ namespace TD.Gameplay.Spawn
                     try { await Task.Delay(100, token); } catch { return; }
                 }
                 // 发放奖励并广播 RoundRewardGranted，然后广播 RoundEnded
+                Debug.Log($"[RoundSpawner] Round {r.round} completed, broadcasting events");
                 TD.Core.GameEvents.RaiseRoundRewardGranted(r.reward);
                 TD.Core.GameEvents.RaiseRoundEnded(r.round);
                 // 回合间隔（非最后一波）

@@ -1,8 +1,8 @@
 {
   "id": "r_tower_damage_x1_2",
-  "name": "Damage +20%",
+  "name": "火力增强",
   "rarity": "Common",
-  "description": "+20% tower damage (global)",
+  "description": "所有防御塔伤害提升20%",
   "effects": [
     { "target": "Tower", "attribute": "damage", "operation": "mult", "value": 1.2, "applyMode": "global" }
   ]

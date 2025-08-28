@@ -58,7 +58,7 @@
     "randomSeed": 123456,
     "defaultRarity": "Common",
     "autoDowngradeRarity": true,
-    "skipIfInsufficient": true,
+    "skipIfInsufficient": false,
     "poolIds": [
       "r_tower_range_x1_1",
       "r_tower_damage_x1_2",

@@ -1,8 +1,8 @@
 {
   "id": "r_tower_range_plus2",
-  "name": "Range +2",
+  "name": "精准瞄准",
   "rarity": "Rare",
-  "description": "+2 tower range (global)",
+  "description": "所有防御塔射程+2",
   "effects": [
     { "target": "Tower", "attribute": "range", "operation": "add", "value": 2.0, "applyMode": "global" }
   ]

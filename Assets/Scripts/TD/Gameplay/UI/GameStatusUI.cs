@@ -95,7 +95,7 @@ namespace TD.Gameplay.UI
             _statusText = textGO.AddComponent<UnityEngine.UI.Text>();
             _statusText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             _statusText.fontSize = 16;
-            _statusText.color = Color.white;
+            _statusText.color = Color.black;
             _statusText.alignment = TextAnchor.MiddleCenter;
             _statusText.text = $"生命: {_lives}   金钱: {_money}   回合: {_currentRound}   剩余敌人: {_enemiesRemaining}";
 

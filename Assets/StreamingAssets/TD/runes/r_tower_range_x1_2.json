@@ -1,8 +1,8 @@
 {
   "id": "r_tower_range_x1_2",
-  "name": "Range +20%",
+  "name": "鹰眼术",
   "rarity": "Epic",
-  "description": "+20% tower range (global)",
+  "description": "所有防御塔射程提升20%",
   "effects": [
     { "target": "Tower", "attribute": "range", "operation": "mult", "value": 1.2, "applyMode": "global" }
   ]

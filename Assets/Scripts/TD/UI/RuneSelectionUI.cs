@@ -52,11 +52,22 @@ namespace TD.UI
 
         private void OnRoundEnded(int round)
         {
-            if (!ServiceContainer.Instance.TryGet<RunesService>(out var runes)) return;
+            Debug.Log($"[RuneSelectionUI] Round {round} ended, checking for rune offers");
+            if (!ServiceContainer.Instance.TryGet<RunesService>(out var runes)) 
+            {
+                Debug.Log($"[RuneSelectionUI] RunesService not found");
+                return;
+            }
             var offers = runes.GetOffersForRound(round);
-            if (offers == null || offers.Count == 0) return;
+            Debug.Log($"[RuneSelectionUI] Got {offers?.Count ?? 0} offers for round {round}");
+            if (offers == null || offers.Count == 0) 
+            {
+                Debug.Log($"[RuneSelectionUI] No offers available, skipping UI");
+                return;
+            }
 
             bool pause = runes.PauseOnSelection;
+            Debug.Log($"[RuneSelectionUI] Opening rune selection UI");
             TryOpen(offers, pause);
         }
 
