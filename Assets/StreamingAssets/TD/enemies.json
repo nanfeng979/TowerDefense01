@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "enemies": [
+    { "id": "grunt",  "name": "Grunt",  "element": "wood",  "hp": 60.0,  "moveSpeed": 2.2,  "bounty": 5 },
+    { "id": "runner", "name": "Runner", "element": "fire",  "hp": 40.0,  "moveSpeed": 3.5,  "bounty": 6 },
+    { "id": "tank",   "name": "Tank",   "element": "metal", "hp": 180.0, "moveSpeed": 1.6, "bounty": 12 }
+  ]
+}

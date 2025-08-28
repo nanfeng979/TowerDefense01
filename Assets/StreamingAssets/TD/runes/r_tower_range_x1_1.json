@@ -1,0 +1,9 @@
+{
+  "id": "r_tower_range_x1_1",
+  "name": "Range +10%",
+  "rarity": "Common",
+  "description": "+10% tower range (global)",
+  "effects": [
+    { "target": "Tower", "attribute": "range", "operation": "mult", "value": 1.1, "applyMode": "global" }
+  ]
+}

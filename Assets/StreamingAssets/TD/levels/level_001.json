@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "levelId": "001",
+  "displayName": "Greenfield",
+  "grid": { "cellSize": 1.0, "width": 20, "height": 12, "showGizmos": true, "gizmoColor": "#00FF00FF" },
+  "path": { "id": "p_main", "waypoints": [ { "x": 1, "y": 0, "z": 1 }, { "x": 5, "y": 0, "z": 1 }, { "x": 5, "y": 0, "z": 8 }, { "x": 15, "y": 0, "z": 8 } ] },
+  "buildSlots": [
+    { "x": 1, "y": 0, "z": 2,  "type": "ground" },
+    { "x": 2, "y": 0, "z": 2,  "type": "ground" },
+    { "x": 6, "y": 0, "z": 2,  "type": "ground" },
+    { "x": 6, "y": 0, "z": 7,  "type": "ground" },
+    { "x": 10, "y": 0, "z": 7, "type": "ground" },
+    { "x": 14, "y": 0, "z": 7, "type": "ground" }
+  ],
+  "terrain": {
+    "default": "grass",
+    "fromPath": { "enabled": true, "widthInCells": 2.0 },
+    "overrides": [
+      { "type": "soil",  "rect": { "x": 4,  "z": 2,  "w": 2, "h": 2 } },
+      { "type": "grass", "rect": { "x": 12, "z": 7,  "w": 2, "h": 2 } }
+    ]
+  },
+  "terrainMap": {
+    "legend": [
+      { "key": "G", "type": "grass" },
+      { "key": "S", "type": "soil" }
+    ],
+    "rows": [
+      "GGGGGGGGGGGGGGGGGGGG",
+      "GSSSSSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSGGGGGGGGGGGGGG",
+      "GGGGGSSSSSSSSSSSGGGG",
+      "GGGGGGGGGGGGGGGGGGGG",
+      "GGGGGGGGGGGGGGGGGGGG",
+      "GGGGGGGGGGGGGGGGGGGG"
+    ]
+  },
+  "props": [
+    { "type": "rock", "x": 3, "y": 0, "z": 3, "rotY": 20, "scale": 1.1 },
+    { "type": "rock", "x": 8, "y": 0, "z": 6 }
+  ],
+  "rounds": {
+    "global": { "spawnInterval": 0.8, "roundInterval": 10.0 },
+    "list": [
+      { "round": 1, "reward": 20, "enemies": ["grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt"], "offerRunes": true, "rarity": "Common" },
+      { "round": 2, "reward": 25, "enemies": ["grunt","grunt","grunt","grunt","runner","runner","runner","runner","runner"], "spawnInterval": 0.7, "offerRunes": true, "rarity": "Common" },
+      { "round": 3, "reward": 40, "enemies": ["tank","tank","tank","runner","runner","runner","runner","runner","runner"], "offerRunes": true, "rarity": "Rare" }
+    ]
+  },
+  "runes": {
+    "pauseOnSelection": true,
+    "useRandomSeed": true,
+    "randomSeed": 123456,
+    "defaultRarity": "Common",
+    "autoDowngradeRarity": true,
+    "skipIfInsufficient": true,
+    "poolIds": [
+      "r_tower_range_x1_1",
+      "r_tower_damage_x1_2",
+      "r_enemy_speed_minus1",
+      "r_tower_range_plus2",
+      "r_tower_damage_plus3",
+      "r_enemy_speed_x0_9",
+      "r_tower_range_x1_2",
+      "r_tower_damage_x1_3",
+      "r_enemy_speed_x0_8"
+    ]
+  },
+  "lives": 20,
+  "startMoney": 100
+}

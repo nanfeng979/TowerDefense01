@@ -1,0 +1,9 @@
+{
+  "id": "r_enemy_speed_x0_8",
+  "name": "Enemy Speed x0.8",
+  "rarity": "Epic",
+  "description": "All enemies x0.8 move speed (per-enemy debuff)",
+  "effects": [
+    { "target": "Enemy", "attribute": "moveSpeed", "operation": "mult", "value": 0.8, "applyMode": "perEnemyDebuff" }
+  ]
+}

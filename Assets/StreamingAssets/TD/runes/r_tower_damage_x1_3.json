@@ -1,0 +1,9 @@
+{
+  "id": "r_tower_damage_x1_3",
+  "name": "Damage +30%",
+  "rarity": "Epic",
+  "description": "+30% tower damage (global)",
+  "effects": [
+    { "target": "Tower", "attribute": "damage", "operation": "mult", "value": 1.3, "applyMode": "global" }
+  ]
+}

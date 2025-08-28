@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "elements": ["metal", "wood", "water", "fire", "earth"],
+  "multipliers": [
+    { "attacker": "metal", "defender": "wood",  "mult": 1.25 },
+    { "attacker": "wood",  "defender": "water", "mult": 1.25 },
+    { "attacker": "water", "defender": "fire",  "mult": 1.25 },
+    { "attacker": "fire",  "defender": "earth", "mult": 1.25 },
+    { "attacker": "earth", "defender": "metal", "mult": 1.25 }
+  ],
+  "default": 1.0,
+  "countered": 0.8
+}

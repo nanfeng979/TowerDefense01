@@ -1,0 +1,9 @@
+{
+  "id": "r_tower_damage_plus3",
+  "name": "Damage +3",
+  "rarity": "Rare",
+  "description": "+3 tower damage (global)",
+  "effects": [
+    { "target": "Tower", "attribute": "damage", "operation": "add", "value": 3.0, "applyMode": "global" }
+  ]
+}

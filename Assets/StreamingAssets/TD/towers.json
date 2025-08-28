@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "towers": [
+    {
+      "id": "gun_basic",
+      "name": "Basic Gun",
+      "element": "metal",
+      "cost": 50,
+      "range": 6.0,
+      "fireRate": 1.0,
+      "bullet": { "speed": 18.0, "damage": 10.0, "lifeTime": 2.0 },
+      "targeting": "first"
+    },
+    {
+      "id": "gun_fast",
+      "name": "Fast Gun",
+      "element": "wood",
+      "cost": 65,
+      "range": 5.0,
+      "fireRate": 2.0,
+      "bullet": { "speed": 20.0, "damage": 6.0, "lifeTime": 2.0 },
+      "targeting": "closest"
+    },
+    {
+      "id": "gun_heavy",
+      "name": "Heavy Gun",
+      "element": "earth",
+      "cost": 90,
+      "range": 7.5,
+      "fireRate": 0.6,
+      "bullet": { "speed": 16.0, "damage": 22.0, "lifeTime": 2.5 },
+      "targeting": "strongest"
+    }
+  ]
+}

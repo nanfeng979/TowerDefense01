@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "levelId": "002",
+  "displayName": "Highlands",
+  "grid": { "cellSize": 1.0, "width": 40, "height": 24, "showGizmos": true, "gizmoColor": "#0080FFFF" },
+  "path": { "id": "p_main", "waypoints": [
+    { "x": 1, "y": 0, "z": 2 }, { "x": 10, "y": 0, "z": 2 }, { "x": 10, "y": 0, "z": 12 },
+    { "x": 28, "y": 0, "z": 12 }, { "x": 28, "y": 0, "z": 20 }, { "x": 38, "y": 0, "z": 20 }
+  ]},
+  "buildSlots": [
+    { "x": 5, "y": 0, "z": 3, "type": "ground" },
+    { "x": 6, "y": 0, "z": 3, "type": "ground" },
+    { "x": 7, "y": 0, "z": 3, "type": "ground" },
+    { "x": 14, "y": 0, "z": 6, "type": "ground" },
+    { "x": 16, "y": 0, "z": 6, "type": "ground" },
+    { "x": 24, "y": 0, "z": 13, "type": "ground" },
+    { "x": 26, "y": 0, "z": 13, "type": "ground" },
+    { "x": 30, "y": 0, "z": 14, "type": "ground" },
+    { "x": 33, "y": 0, "z": 19, "type": "ground" }
+  ],
+  "rounds": {
+    "global": { "spawnInterval": 0.7, "roundInterval": 12.0 },
+    "list": [
+      { "round": 1, "reward": 25, "enemies": [
+        "grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt"
+      ], "spawnInterval": 0.7 },
+      { "round": 2, "reward": 30, "enemies": [
+        "grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt",
+        "runner","runner","runner","runner","runner","runner","runner","runner"
+      ], "spawnInterval": 0.6 },
+      { "round": 3, "reward": 50, "enemies": [
+        "tank","tank","tank","tank","tank",
+        "runner","runner","runner","runner","runner","runner","runner","runner","runner","runner"
+      ], "spawnInterval": 0.8 }
+    ]
+  },
+  "lives": 25,
+  "startMoney": 120
+}
