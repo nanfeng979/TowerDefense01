@@ -45,7 +45,7 @@
     { "type": "rock", "x": 8, "y": 0, "z": 6 }
   ],
   "rounds": {
-    "global": { "spawnInterval": 0.8, "roundInterval": 10.0 },
+    "global": { "spawnInterval": 0.8, "roundInterval": 5.0 },
     "list": [
       { "round": 1, "reward": 20, "enemies": ["grunt","grunt","grunt","grunt","grunt","grunt","grunt","grunt"], "offerRunes": true, "rarity": "Common" },
       { "round": 2, "reward": 25, "enemies": ["grunt","grunt","grunt","grunt","runner","runner","runner","runner","runner"], "spawnInterval": 0.7, "offerRunes": true, "rarity": "Common" },

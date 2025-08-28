@@ -102,11 +102,15 @@ namespace TD.Core
             if (rc == null) 
             {
                 Debug.Log($"[RunesService] Round config not found for round {round}");
+                // 没有符文配置时直接完成
+                TD.Core.GameEvents.RaiseRuneSelectionCompleted();
                 return;
             }
             if (!rc.offerRunes) 
             {
                 Debug.Log($"[RunesService] Round {round} does not offer runes");
+                // 不提供符文时直接完成
+                TD.Core.GameEvents.RaiseRuneSelectionCompleted();
                 return;
             }
             Debug.Log($"[RunesService] Round {round} should offer runes with rarity: {rc.rarity}");

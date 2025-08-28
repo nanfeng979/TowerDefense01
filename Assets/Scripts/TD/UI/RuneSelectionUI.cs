@@ -56,13 +56,17 @@ namespace TD.UI
             if (!ServiceContainer.Instance.TryGet<RunesService>(out var runes)) 
             {
                 Debug.Log($"[RuneSelectionUI] RunesService not found");
+                // 如果服务不可用，也要触发完成事件让游戏继续
+                TD.Core.GameEvents.RaiseRuneSelectionCompleted();
                 return;
             }
             var offers = runes.GetOffersForRound(round);
             Debug.Log($"[RuneSelectionUI] Got {offers?.Count ?? 0} offers for round {round}");
             if (offers == null || offers.Count == 0) 
             {
-                Debug.Log($"[RuneSelectionUI] No offers available, skipping UI");
+                Debug.Log($"[RuneSelectionUI] No offers available, skipping UI and triggering completion");
+                // 没有符文可选时，直接触发完成事件
+                TD.Core.GameEvents.RaiseRuneSelectionCompleted();
                 return;
             }
 
@@ -113,10 +117,17 @@ namespace TD.UI
 
         private void OnChoose(string id)
         {
+            Debug.Log($"[RuneSelectionUI] Player selected rune: {id}");
+            
             if (ServiceContainer.Instance.TryGet<RunesService>(out var runes))
             {
                 runes.ChooseRune(id);
             }
+            
+            // 触发符文选择事件
+            TD.Core.GameEvents.RaiseRuneSelected(id);
+            TD.Core.GameEvents.RaiseRuneSelectionCompleted();
+            
             Close();
         }
 

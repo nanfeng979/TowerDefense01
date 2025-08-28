@@ -37,6 +37,7 @@ namespace TD.Gameplay.Spawn
         private LevelConfig _level;
         private bool _running;
         private CancellationTokenSource _cts;
+        private bool _waitingForRuneSelection = false;
 
         private async void Start()
         {
@@ -78,6 +79,9 @@ namespace TD.Gameplay.Spawn
                 _pools[key] = _poolService.GetOrCreate(key, kv.Value, enemiesRoot, prewarm: 8);
             }
 
+            // 监听符文选择完成事件
+            TD.Core.GameEvents.RuneSelectionCompleted += OnRuneSelectionCompleted;
+
             _cts = new CancellationTokenSource();
             _ = RunWavesAsync(_cts.Token);
         }
@@ -88,6 +92,15 @@ namespace TD.Gameplay.Spawn
             _cts?.Dispose();
             _cts = null;
             _running = false;
+            
+            // 取消事件监听
+            TD.Core.GameEvents.RuneSelectionCompleted -= OnRuneSelectionCompleted;
+        }
+
+        private void OnRuneSelectionCompleted()
+        {
+            Debug.Log("[RoundSpawner] Rune selection completed, resuming next round");
+            _waitingForRuneSelection = false;
         }
 
         private async Task RunWavesAsync(CancellationToken token)
@@ -110,10 +123,26 @@ namespace TD.Gameplay.Spawn
                 Debug.Log($"[RoundSpawner] Round {r.round} completed, broadcasting events");
                 TD.Core.GameEvents.RaiseRoundRewardGranted(r.reward);
                 TD.Core.GameEvents.RaiseRoundEnded(r.round);
-                // 回合间隔（非最后一波）
-                if (!ReferenceEquals(r, list.Last()) && roundInterval > 0f)
+                
+                // 等待符文选择完成（如果不是最后一回合）
+                if (!ReferenceEquals(r, list.Last()))
                 {
-                    try { await Task.Delay((int)(roundInterval * 1000), token); } catch { return; }
+                    Debug.Log($"[RoundSpawner] Waiting for rune selection to complete...");
+                    _waitingForRuneSelection = true;
+                    
+                    // 等待符文选择完成
+                    while (!token.IsCancellationRequested && _waitingForRuneSelection)
+                    {
+                        try { await Task.Delay(100, token); } catch { return; }
+                    }
+                    
+                    Debug.Log($"[RoundSpawner] Rune selection completed, proceeding to next round");
+                    
+                    // 回合间隔
+                    if (roundInterval > 0f)
+                    {
+                        try { await Task.Delay((int)(roundInterval * 1000), token); } catch { return; }
+                    }
                 }
             }
             _running = false;
