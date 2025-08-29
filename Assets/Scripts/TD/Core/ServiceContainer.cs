@@ -26,6 +26,17 @@ namespace TD.Core
         }
 
         /// <summary>
+        /// 以运行时类型注册服务实例。
+        /// </summary>
+        public void Register(System.Type type, object service)
+        {
+            if (type == null || service == null) throw new System.ArgumentNullException();
+            if (_services.ContainsKey(type))
+                throw new InvalidOperationException($"Service {type.Name} already registered");
+            _services[type] = service;
+        }
+
+        /// <summary>
         /// 获取服务实例。
         /// </summary>
         public T Get<T>() where T : class
@@ -52,11 +63,27 @@ namespace TD.Core
         }
 
         /// <summary>
+        /// 通过运行时类型尝试获取服务实例（无需泛型引用）。
+        /// </summary>
+        public bool TryGet(System.Type type, out object service)
+        {
+            return _services.TryGetValue(type, out service);
+        }
+
+        /// <summary>
         /// 检查服务是否已注册。
         /// </summary>
         public bool IsRegistered<T>()
         {
             return _services.ContainsKey(typeof(T));
+        }
+
+        /// <summary>
+        /// 通过运行时类型检查是否已注册。
+        /// </summary>
+        public bool IsRegistered(System.Type type)
+        {
+            return _services.ContainsKey(type);
         }
 
         /// <summary>

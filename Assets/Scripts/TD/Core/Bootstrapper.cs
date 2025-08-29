@@ -1,7 +1,7 @@
 using UnityEngine;
 using TD.Config;
 using TD.Common;
-using TD.Core;
+using TD.UI;
 
 namespace TD.Core
 {
@@ -59,6 +59,28 @@ namespace TD.Core
                     container.Register<RunesService>(runesService);
                 }
 
+                // 全局 UI 资源服务：字体集中管理（通过 Assets 路径加载）
+                // 直接注册 UI 资源服务（同时按接口与具体类型注册，便于解耦）
+                if (!container.IsRegistered<TD.UI.UIResourceService>())
+                {
+                    var jsonLoader = container.Get<IJsonLoader>();
+                    var uiRes = new TD.UI.UIResourceService(jsonLoader);
+                    container.Register<TD.UI.UIResourceService>(uiRes);
+                    if (!container.IsRegistered<IUIResourceService>())
+                    {
+                        container.Register<IUIResourceService>(uiRes);
+                    }
+                }
+
+#if TD_LOCALIZATION
+                // Localization service 注册（通过编译符号 TD_LOCALIZATION 启用）
+                if (!container.IsRegistered<ILocalizationService>())
+                {
+                    var loc = new LocalizationService();
+                    container.Register<ILocalizationService>(loc);
+                }
+#endif
+
                 // 如需符文选择界面，请在场景中添加 TD.UI.RuneSelectionUI 组件
 
                 // 初始化与注册生命周期接口
@@ -81,24 +103,38 @@ namespace TD.Core
 
         private async void Start()
         {
-            // 仅做数据预热，避免阻塞 Awake 中的服务注册
             if (!initializeOnStart) return;
-            await PrewarmConfigsAsync();
-        }
 
-        private async System.Threading.Tasks.Task PrewarmConfigsAsync()
-        {
+            // 在所有服务初始化完成前，短暂暂停游戏推进
+            float prevScale = Time.timeScale;
+            Time.timeScale = 0f;
             try
             {
-                var configService = ServiceContainer.Instance.Get<IConfigService>();
-                var elements = await configService.GetElementsAsync();
-                var towers = await configService.GetTowersAsync();
-                var enemies = await configService.GetEnemiesAsync();
-                Debug.Log($"[Bootstrap] Config prewarmed: {elements.elements.Count} elements, {towers.towers.Count} towers, {enemies.enemies.Count} enemies");
+                await InitializeServicesAsync();
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[Bootstrap] Config prewarm failed: {ex.Message}");
+                Debug.LogError($"[Bootstrap] Service initialization failed: {ex.Message}");
+            }
+            finally
+            {
+                Time.timeScale = prevScale;
+            }
+        }
+
+        private async System.Threading.Tasks.Task InitializeServicesAsync()
+        {
+            try
+            {
+                // 仅初始化需要异步准备的服务，尽量保持启动阶段轻量，不在此处加载具体资源
+                if (ServiceContainer.Instance.TryGet<TD.UI.UIResourceService>(out var uiResObj))
+                {
+                    await uiResObj.InitializeAsync();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Bootstrap] InitializeServicesAsync failed: {ex.Message}");
             }
         }
 

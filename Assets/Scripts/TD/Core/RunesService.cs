@@ -72,7 +72,7 @@ namespace TD.Core
                         if (def != null) 
                         {
                             _defs[id] = def;
-                            Debug.Log($"[RunesService] Loaded rune: {def.name} ({def.rarity})");
+                            // Debug.Log($"[RunesService] Loaded rune: {def.name} ({def.rarity})");
                         }
                     }
                     catch (Exception ex)
