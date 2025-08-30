@@ -70,9 +70,7 @@ namespace TD.UI
                 {
                     foreach (var t in _allTexts)
                     {
-                        Debug.Log("1");
                         if (t != null) _ = uiRes.SetDefaultFontAsync(t);
-                        Debug.Log("2");
                     }
                     _ = uiRes.GetOrLoadDefaultFontAsync()
                         .ContinueWith(new System.Action<System.Threading.Tasks.Task<TMPro.TMP_FontAsset>>(task => {

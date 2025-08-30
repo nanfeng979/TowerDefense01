@@ -3,8 +3,7 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using TD.Config;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
+// Addressables 相关引用在宏内
 
 
 
@@ -62,15 +61,10 @@ namespace TD.UI
 
         public async Task<TMP_FontAsset> GetOrLoadDefaultFontAsync()
         {
-            await Task.Delay(3000); // TODO: 临时设置为等待3s
-            Debug.Log("GetOrLoadDefaultFontAsync");
-            Debug.Log(_cfg.defaultFontAddress);
             if (_defaultFont != null) return _defaultFont;
             if (!string.IsNullOrEmpty(_cfg.defaultFontAddress))
             {
                 _defaultFont = await LoadFontByAddressAsync(_cfg.defaultFontAddress);
-                Debug.Log("_cfg.defaultFontAddress: " + _cfg.defaultFontAddress);
-                Debug.Log(_defaultFont);
                 return _defaultFont;
             }
             if (!string.IsNullOrEmpty(_cfg.defaultFontAssetPath))
@@ -128,17 +122,14 @@ namespace TD.UI
             if (_loadingTasks.TryGetValue(address, out var existing))
                 return existing;
 
-            // #if ENABLE_ADDRESSABLES
+#if ENABLE_ADDRESSABLES
             var handle = Addressables.LoadAssetAsync<TMP_FontAsset>(address);
             var tcs = new TaskCompletionSource<TMP_FontAsset>();
-
             _loadingTasks[address] = tcs.Task;
             handle.Completed += op =>
             {
                 if (op.Status == AsyncOperationStatus.Succeeded)
-                {
                     tcs.SetResult(op.Result);
-                }
                 else
                 {
                     Debug.LogWarning($"[UIResourceService] Addressables load failed: {address}, {op.OperationException}");
@@ -146,12 +137,12 @@ namespace TD.UI
                 }
             };
             return tcs.Task;
-            // #else
-            //             Debug.LogWarning($"[UIResourceService] Addressables not enabled. Define ENABLE_ADDRESSABLES and set up Addressables to use runtime loading.");
-            //             var task = Task.FromResult<TMP_FontAsset>(null);
-            //             _loadingTasks[address] = task;
-            //             return task;
-            // #endif
+#else
+            Debug.LogWarning($"[UIResourceService] Addressables not enabled. Define ENABLE_ADDRESSABLES and set up Addressables.");
+            var task = Task.FromResult<TMP_FontAsset>(null);
+            _loadingTasks[address] = task;
+            return task;
+#endif
         }
     }
 }

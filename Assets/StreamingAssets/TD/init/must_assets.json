@@ -1,0 +1,10 @@
+{
+  "resourcesPrefabs": [
+    "UI/MainMenu",
+    "UI/LevelSelection",
+    "UI/ConfirmDialog"
+  ],
+  "addressableAssets": [
+  ],
+  "uiFonts": []
+}
