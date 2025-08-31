@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using TD.Common;
 using TD.UI;
 using UnityEngine.UI;
 using TD.UI.Panels;
+using TD.Assets;
 
 namespace TD.Core
 {
@@ -28,6 +30,10 @@ namespace TD.Core
         public GameState State { get; private set; } = GameState.Menu;
 
         private IUIManager _uiManager;
+        private IAssetProvider _assetProvider;
+        private Transform _levelRoot;
+        private GameObject _currentLevel;
+        private readonly List<(Camera cam, bool wasEnabled, AudioListener al, bool alWasEnabled)> _savedCamStates = new();
         // 场景内 Loading 根节点与控件（避免依赖 UIManager/类型）
         private GameObject _loadingRoot;
         private CanvasGroup _loadingCanvas;
@@ -45,6 +51,7 @@ namespace TD.Core
 
             // 依赖：UIManager（由 Bootstrapper 注册）；Loading 直接从场景查找
             ServiceContainer.Instance.TryGet<IUIManager>(out _uiManager);
+            ServiceContainer.Instance.TryGet<IAssetProvider>(out _assetProvider);
             var go = GameObject.Find("Loading");
             if (go != null)
             {
@@ -108,17 +115,59 @@ namespace TD.Core
 
         public async Task EnterLevel(int levelId)
         {
-            // 进入关卡：此处仅保留流程骨架
+            Debug.Log($"[GameController] Entering Level {levelId}");
+            // 准备 LevelRoot
+            EnsureLevelRoot();
+
+            // 清理旧关卡（容错）
+            if (_currentLevel != null)
+            {
+                Object.Destroy(_currentLevel);
+                _currentLevel = null;
+            }
+
+            // 加载并实例化关卡预制体（Resources: Levels/Level_{id}）
+            var key = $"Levels/Level_{levelId}";
+            GameObject prefab = null;
+            if (_assetProvider != null)
+            {
+                prefab = await _assetProvider.LoadPrefabAsync(key);
+            }
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[GameController] Level prefab not found: {key}. Creating placeholder.");
+                _currentLevel = new GameObject($"[Level_{levelId}_Placeholder]");
+                _currentLevel.transform.SetParent(_levelRoot, false);
+            }
+            else
+            {
+                _currentLevel = Object.Instantiate(prefab, _levelRoot, false);
+                _currentLevel.name = $"[Level_{levelId}]";
+            }
+
+            // 摄像机切换：如果关卡内自带摄像机，则临时禁用原有摄像机，启用关卡摄像机
+            TrySwitchToLevelCameras();
+
+            // 推入关卡 HUD
+            if (_uiManager != null)
+            {
+                await _uiManager.PushAsync<LevelHUDPanel>("UI/LevelHUD", modal: false);
+            }
+
             State = GameState.Playing;
-            // 例如：await _uiManager.ReplaceAsync<GameplayPanel>("UI/GameLevel_" + levelId);
-            await Task.CompletedTask;
         }
 
         public async Task ExitLevel()
         {
-            // 退出关卡：此处仅保留流程骨架
+            // 销毁当前关卡实例
+            if (_currentLevel != null)
+            {
+                Object.Destroy(_currentLevel);
+                _currentLevel = null;
+            }
+            // 恢复进入关卡前的摄像机状态
+            RestoreCameras();
             State = GameState.Menu;
-            // 返回到关卡选择面板或主菜单
             await Task.CompletedTask;
         }
 
@@ -140,13 +189,96 @@ namespace TD.Core
             }
         }
 
-        public void OnBackPressed()
+        public async void OnBackPressed()
         {
-            // 默认路由到 UIManager；若未处理且在关卡中，可触发暂停/确认对话框流程（后续接入）
-            if (_uiManager != null)
+            if (_uiManager == null)
+                return;
+
+            // 在关卡中：ESC/返回键 → 若已打开对话框(Top.IsModal)则关闭；否则打开确认对话框
+            if (State == GameState.Playing)
             {
-                _uiManager.RouteBack();
+                var top = _uiManager.Top;
+                if (top != null && top.IsModal)
+                {
+                    await _uiManager.PopAsync();
+                }
+                else
+                {
+                    await _uiManager.PushAsync<TD.UI.Panels.ConfirmDialogPanel>("UI/ConfirmDialog", modal: true);
+                }
+                return;
             }
+
+            // 其他状态：按普通回退处理
+            _uiManager.RouteBack();
+        }
+
+        private void EnsureLevelRoot()
+        {
+            if (_levelRoot != null) return;
+            var root = GameObject.Find("[LevelRoot]");
+            if (root == null)
+            {
+                root = new GameObject("[LevelRoot]");
+                Object.DontDestroyOnLoad(root);
+            }
+            _levelRoot = root.transform;
+        }
+
+        private void TrySwitchToLevelCameras()
+        {
+            if (_currentLevel == null) return;
+            var levelCams = _currentLevel.GetComponentsInChildren<Camera>(true);
+            if (levelCams == null || levelCams.Length == 0)
+            {
+                // 关卡未提供摄像机，继续使用场景原有摄像机
+                return;
+            }
+
+            // 记录并禁用当前所有“非关卡”的已启用摄像机及其AudioListener
+            _savedCamStates.Clear();
+            foreach (var cam in Camera.allCameras)
+            {
+                if (cam == null) continue;
+                if (IsUnder(cam.transform, _levelRoot)) continue; // 不处理关卡内摄像机
+                var al = cam.GetComponent<AudioListener>();
+                _savedCamStates.Add((cam, cam.enabled, al, al != null && al.enabled));
+                cam.enabled = false;
+                if (al != null) al.enabled = false;
+            }
+
+            // 启用关卡摄像机（通常预制体已配置好）
+            foreach (var cam in levelCams)
+            {
+                if (cam == null) continue;
+                cam.enabled = true;
+                var al = cam.GetComponent<AudioListener>();
+                // 若需要也可在此启用一个 AudioListener，但避免多监听器冲突
+                // 这里保持预制体内既有设置，不强制改动
+            }
+        }
+
+        private void RestoreCameras()
+        {
+            if (_savedCamStates.Count == 0) return;
+            foreach (var s in _savedCamStates)
+            {
+                if (s.cam != null) s.cam.enabled = s.wasEnabled;
+                if (s.al != null) s.al.enabled = s.alWasEnabled;
+            }
+            _savedCamStates.Clear();
+        }
+
+        private static bool IsUnder(Transform node, Transform root)
+        {
+            if (node == null || root == null) return false;
+            var t = node;
+            while (t != null)
+            {
+                if (t == root) return true;
+                t = t.parent;
+            }
+            return false;
         }
     }
 }

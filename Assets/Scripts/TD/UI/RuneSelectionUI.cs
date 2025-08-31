@@ -57,6 +57,7 @@ namespace TD.UI
 
         private void Awake()
         {
+            Debug.Log("[RuneSelectionUI] Awake");
             CreateUI();
         }
 

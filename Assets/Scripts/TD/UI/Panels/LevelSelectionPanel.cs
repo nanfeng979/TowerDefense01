@@ -14,7 +14,7 @@ namespace TD.UI.Panels
         {
             gameObject.name = "[LevelSelectionPanel]";
 
-            var backBtn = transform.Find("BackButton")?.GetComponent<Button>();
+            var backBtn = transform.Find("TopBar/BackButton")?.GetComponent<Button>();
             if (backBtn != null)
             {
                 backBtn.onClick.RemoveAllListeners();
@@ -25,6 +25,24 @@ namespace TD.UI.Panels
                         await ui.PopAsync();
                     }
                 });
+            }
+
+            // 临时：为 Content 下的第一个按钮绑定“进入第一关”
+            var content = transform.Find("ScrollView/Viewport/Content");
+            if (content != null)
+            {
+                var firstButton = content.GetComponentInChildren<Button>();
+                if (firstButton != null)
+                {
+                    firstButton.onClick.RemoveAllListeners();
+                    firstButton.onClick.AddListener(async () =>
+                    {
+                        if (GameController.Instance != null)
+                        {
+                            await GameController.Instance.EnterLevel(1);
+                        }
+                    });
+                }
             }
 
             return base.OnShowAsync(args);

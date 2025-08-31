@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using TD.Config;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+
+
 // Addressables 相关引用在宏内
 
 
@@ -122,7 +126,7 @@ namespace TD.UI
             if (_loadingTasks.TryGetValue(address, out var existing))
                 return existing;
 
-#if ENABLE_ADDRESSABLES
+// #if ENABLE_ADDRESSABLES
             var handle = Addressables.LoadAssetAsync<TMP_FontAsset>(address);
             var tcs = new TaskCompletionSource<TMP_FontAsset>();
             _loadingTasks[address] = tcs.Task;
@@ -137,12 +141,12 @@ namespace TD.UI
                 }
             };
             return tcs.Task;
-#else
-            Debug.LogWarning($"[UIResourceService] Addressables not enabled. Define ENABLE_ADDRESSABLES and set up Addressables.");
-            var task = Task.FromResult<TMP_FontAsset>(null);
-            _loadingTasks[address] = task;
-            return task;
-#endif
+// #else
+//             Debug.LogWarning($"[UIResourceService] Addressables not enabled. Define ENABLE_ADDRESSABLES and set up Addressables.");
+//             var task = Task.FromResult<TMP_FontAsset>(null);
+//             _loadingTasks[address] = task;
+//             return task;
+// #endif
         }
     }
 }

@@ -234,7 +234,7 @@ namespace TD.Core
                 }
             }
 
-#if ENABLE_ADDRESSABLES
+            // #if ENABLE_ADDRESSABLES
             // Addressables 资源加载（仅加载到内存，不实例化）
             if (cfg.addressableAssets != null)
             {
@@ -255,15 +255,15 @@ namespace TD.Core
                     }
                 }
             }
-#endif
+// #endif
 
             // 保证最小时间
-            while ((Time.realtimeSinceStartup - start) < minDur)
-            {
-                await report();
-                await System.Threading.Tasks.Task.Delay(33);
-            }
-            ReportProgress(1f);
+            // while ((Time.realtimeSinceStartup - start) < minDur)
+            // {
+            //     await report();
+            //     await System.Threading.Tasks.Task.Delay(33);
+            // }
+            // ReportProgress(1f);
         }
 
         private static void ReportProgress(float value)

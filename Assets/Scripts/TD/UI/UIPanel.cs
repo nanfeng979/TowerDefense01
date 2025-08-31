@@ -8,7 +8,7 @@ namespace TD.UI
     /// - 提供异步生命周期，便于后续接入过渡动画。
     /// - 提供返回键处理扩展点。
     /// </summary>
-    public abstract class UIPanel : MonoBehaviour
+    public class UIPanel : MonoBehaviour
     {
         public bool IsModal { get; set; }
 

@@ -42,7 +42,6 @@ namespace TD.Core
                     return;
                 }
                 _instance = this;
-                DontDestroyOnLoad(gameObject);
             }
 
             _defaultFixedDeltaTime = Time.fixedDeltaTime;

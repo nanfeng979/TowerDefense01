@@ -2,9 +2,12 @@
   "resourcesPrefabs": [
     "UI/MainMenu",
     "UI/LevelSelection",
-    "UI/ConfirmDialog"
+    "UI/ConfirmDialog",
+    "UI/LevelHUD"
   ],
   "addressableAssets": [
+    "Fonts/SourceHanSansCN-Regular SDF"
   ],
-  "uiFonts": []
+  "uiFonts": [
+  ]
 }
