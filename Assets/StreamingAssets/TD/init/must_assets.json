@@ -5,9 +5,7 @@
     "UI/ConfirmDialog",
     "UI/LevelHUD"
   ],
-  "addressableAssets": [
-    "Fonts/SourceHanSansCN-Regular SDF"
-  ],
-  "uiFonts": [
-  ]
+  "uiInject": {
+    "defaultFont": "Fonts/SourceHanSansCN-Regular SDF"
+  }
 }

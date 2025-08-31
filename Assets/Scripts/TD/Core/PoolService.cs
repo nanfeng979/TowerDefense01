@@ -11,7 +11,7 @@ namespace TD.Core
     /// </summary>
     public class PoolService : IInitializable, IDisposableEx
     {
-    private readonly Dictionary<string, GameObjectPool> _goPools = new Dictionary<string, GameObjectPool>();
+        private readonly Dictionary<string, GameObjectPool> _goPools = new Dictionary<string, GameObjectPool>();
 
         public void Initialize() { }
 

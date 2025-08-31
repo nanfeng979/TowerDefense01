@@ -71,7 +71,7 @@ namespace TD.Core
                 if (_loadingProgress != null) _loadingProgress.value = 0f;
             }
 
-            // 等待 Bootstrapper.ServicesReady 事件
+            // 运行 Bootstrapper 初始化/预热，进度直接使用 Bootstrapper 的 0..1
             var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
             void OnReady() { tcs.TrySetResult(true); }
             void OnProgress(float p)
@@ -80,6 +80,12 @@ namespace TD.Core
             }
             Bootstrapper.InitializationProgress += OnProgress;
             Bootstrapper.ServicesReady += OnReady;
+            // 主动触发初始化
+            var bootstrap = FindObjectOfType<Bootstrapper>();
+            if (bootstrap != null)
+            {
+                _ = bootstrap.RunInitializationAsync();
+            }
             await tcs.Task;
             Bootstrapper.ServicesReady -= OnReady;
             Bootstrapper.InitializationProgress -= OnProgress;

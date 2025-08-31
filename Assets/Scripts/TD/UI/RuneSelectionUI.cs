@@ -39,8 +39,6 @@ namespace TD.UI
         private float _prevTimeScale = 1f;
         private bool _hiddenTemporarily = false; // ESC 隐藏状态
         private Button _resumeButton; // 恢复显示按钮
-        private TMP_FontAsset _tmpFont; // 运行时选用的 TMP 字体（由资源服务提供）
-        private readonly List<TMP_Text> _allTexts = new List<TMP_Text>();
         private string _registeredFontPath; // Windows 动态注册的字体路径，用于清理
         [Header("输入配置")]
         [SerializeField] private KeyCode[] _optionKeys = new KeyCode[3] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3 };
@@ -66,19 +64,6 @@ namespace TD.UI
             // 读取外部配置（快捷键/语言），若失败则沿用默认
             try
             {
-                // 通过全局 UI 资源服务按需设置默认字体
-                if (ServiceContainer.Instance.TryGet<IUIResourceService>(out var uiRes))
-                {
-                    foreach (var t in _allTexts)
-                    {
-                        if (t != null) _ = uiRes.SetDefaultFontAsync(t);
-                    }
-                    _ = uiRes.GetOrLoadDefaultFontAsync()
-                        .ContinueWith(new System.Action<System.Threading.Tasks.Task<TMPro.TMP_FontAsset>>(task => {
-                            _tmpFont = task.Result;
-                        }));
-                }
-
                 if (ServiceContainer.Instance.TryGet<IJsonLoader>(out var loader))
                 {
                     var settings = await loader.LoadAsync<RuneSelectionUiSettings>("ui/rune_selection.json");
@@ -113,17 +98,6 @@ namespace TD.UI
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[RuneSelectionUI] Load settings failed: {ex.Message}");
-            }
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void EnsureExists()
-        {
-            if (FindObjectOfType<RuneSelectionUI>() == null)
-            {
-                var go = new GameObject("[RuneSelectionUI]");
-                go.AddComponent<RuneSelectionUI>();
-                Object.DontDestroyOnLoad(go);
             }
         }
 
@@ -163,13 +137,6 @@ namespace TD.UI
 
         private void TryOpen(List<RuneDef> offers, bool pause)
         {
-            // 若尚未拿到默认字体，尝试从 UI 资源服务取一次
-            if (_tmpFont == null && ServiceContainer.Instance.TryGet<IUIResourceService>(out var uiRes2))
-            {
-                _ = uiRes2.GetOrLoadDefaultFontAsync()
-                    .ContinueWith(new System.Action<System.Threading.Tasks.Task<TMPro.TMP_FontAsset>>(task => { _tmpFont = task.Result; }));
-            }
-
             _canvas.enabled = true;
             _overlay.raycastTarget = true;
             _overlay.gameObject.SetActive(true);
@@ -211,7 +178,6 @@ namespace TD.UI
                     tmp.fontSize = 20;
                     tmp.enableWordWrapping = true;
                     tmp.richText = true;
-                    if (_tmpFont != null) tmp.font = _tmpFont;
                 }
             }
 
@@ -245,6 +211,8 @@ namespace TD.UI
 
         private void CreateUI()
         {
+            ServiceContainer.Instance.TryGet<IUIResourceService>(out var uiResObj);
+
             // Canvas
             var go = new GameObject("[RuneSelectionCanvas]");
             go.layer = LayerMask.NameToLayer("UI");
@@ -301,8 +269,7 @@ namespace TD.UI
             titleTMP.fontSize = 36;
             titleTMP.fontStyle = FontStyles.Bold;
             titleTMP.text = Localize("选择一个符文");
-            _allTexts.Add(titleTMP);
-            if (_tmpFont != null) titleTMP.font = _tmpFont;
+            titleTMP.font = uiResObj.GetDefaultFont();
 
             // Buttons 区域
             for (int i = 0; i < 3; i++)
@@ -334,8 +301,7 @@ namespace TD.UI
             rText.color = Color.white;
             rText.fontSize = 22;
             rText.alignment = TextAlignmentOptions.Center;
-            _allTexts.Add(rText);
-            if (_tmpFont != null) rText.font = _tmpFont;
+            rText.font = uiResObj.GetDefaultFont();
             _resumeButton.gameObject.SetActive(false);
 
             _canvas.enabled = false;
@@ -345,6 +311,8 @@ namespace TD.UI
 
         private Button CreateButton(RectTransform parent, Vector2 anchoredPos)
         {
+            ServiceContainer.Instance.TryGet<IUIResourceService>(out var uiResObj);
+
             var go = new GameObject("RuneButton");
             go.transform.SetParent(parent, false);
             var rt = go.AddComponent<RectTransform>();
@@ -373,8 +341,7 @@ namespace TD.UI
             tmp.color = Color.white;
             tmp.fontSize = 20;
             tmp.text = Localize("符文");
-            _allTexts.Add(tmp);
-            if (_tmpFont != null) tmp.font = _tmpFont;
+            tmp.font = uiResObj.GetDefaultFont();
 
             return btn;
         }

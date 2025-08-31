@@ -4,6 +4,7 @@ using TD.Config;
 using TD.Common;
 using TD.UI;
 using TD.Assets;
+using TMPro;
 
 namespace TD.Core
 {
@@ -14,16 +15,9 @@ namespace TD.Core
     [DefaultExecutionOrder(-10000)]
     public class Bootstrapper : MonoBehaviour
     {
-        [System.Serializable]
-        private class MustAssetsConfig
-        {
-            public List<string> resourcesPrefabs = new List<string>();
-            public List<string> addressableAssets = new List<string>();
-            public List<string> uiFonts = new List<string>();
-        }
 
-        [Header("Initialization")]
-        public bool initializeOnStart = true;
+        // 缓存最近一次读取的必要资源配置，供后续初始化阶段使用（如设置默认字体）
+        private MustAssetsConfig _lastMustAssetsCfg;
 
         /// <summary>
         /// 初始化进度（0..1）。用于驱动场景内 Loading 进度条。
@@ -110,20 +104,6 @@ namespace TD.Core
                     container.Register<ILocalizationService>(loc);
                 }
 #endif
-
-                // 如需符文选择界面，请在场景中添加 TD.UI.RuneSelectionUI 组件
-
-                // 初始化与注册生命周期接口
-                foreach (var service in container.GetAllServices())
-                {
-                    if (service is IInitializable init)
-                    {
-                        init.Initialize();
-                    }
-                    if (service is IUpdatable u) driver.RegisterUpdatable(u);
-                    if (service is ILateUpdatable lu) driver.RegisterLateUpdatable(lu);
-                    if (service is IFixedUpdatable fu) driver.RegisterFixedUpdatable(fu);
-                }
             }
             catch (System.Exception ex)
             {
@@ -131,25 +111,33 @@ namespace TD.Core
             }
         }
 
-        private async void Start()
+        /// <summary>
+        /// 供外部（如 GameController）调用的初始化入口：执行服务初始化与必要预热，并通过事件反馈进度/就绪。
+        /// </summary>
+        public async System.Threading.Tasks.Task RunInitializationAsync()
         {
-            if (!initializeOnStart) return;
-
             // 在所有服务初始化完成前，短暂暂停游戏推进
             float prevScale = Time.timeScale;
             Time.timeScale = 0f;
             try
             {
                 ReportProgress(0f);
-                await InitializeServicesAsync();
-                ReportProgress(0.1f);
-                // 必备资源的预热（当前阶段：仅做最小 2s 的进度演示与管线打通）
+                // 1) 必要资源加载（统一在 Bootstrapper 内处理）→ 映射 0..0.8
                 await PrewarmMustHaveAssetsAsync(minDurationSeconds: 2f);
+                ReportProgress(0.8f);
+
+                // 2) 异步初始化需要准备的服务（读取配置/预加载字体等）→ 0.9
+                await InitializeServicesAsync();
+                ReportProgress(0.9f);
+
+                // 3) 初始化与注册生命周期接口（IInitializable/UpdateDriver）→ 1.0
+                InitializeAndRegisterLifecycle();
                 ReportProgress(1f);
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[Bootstrap] Service initialization failed: {ex.Message}");
+                throw;
             }
             finally
             {
@@ -165,9 +153,38 @@ namespace TD.Core
             try
             {
                 // 仅初始化需要异步准备的服务，尽量保持启动阶段轻量，不在此处加载具体资源
-                if (ServiceContainer.Instance.TryGet<TD.UI.UIResourceService>(out var uiResObj))
+                if (ServiceContainer.Instance.TryGet<IUIResourceService>(out var uiResObj))
                 {
                     await uiResObj.InitializeAsync();
+
+                    // 如配置了 uiInject.defaultFont，尝试设置一个默认字体（优先 Addressables，其次 Resources）
+                    if (uiResObj.GetDefaultFont() == null && _lastMustAssetsCfg != null && _lastMustAssetsCfg.uiInject != null)
+                    {
+                        var fontPath = _lastMustAssetsCfg.uiInject.defaultFont;
+                        if (!string.IsNullOrEmpty(fontPath))
+                        {
+                            TMP_FontAsset font = null;
+                            // Addressables 优先
+                            try
+                            {
+                                var handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<TMP_FontAsset>(fontPath);
+                                await handle.Task;
+                                font = handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded ? handle.Result : null;
+                            }
+                            catch { /* ignore */ }
+
+                            // 如果 Addressables 未取到，尝试 Resources
+                            if (font == null)
+                            {
+                                try { font = Resources.Load<TMP_FontAsset>(fontPath); } catch { /* ignore */ }
+                            }
+
+                            if (font != null)
+                            {
+                                uiResObj.SetDefaultFont(font);
+                            }
+                        }
+                    }
                 }
             }
             catch (System.Exception ex)
@@ -191,21 +208,23 @@ namespace TD.Core
             catch { /* ignored */ }
             if (cfg == null) cfg = new MustAssetsConfig();
 
-            // 预热逻辑：并行加载所有声明的资源，并实时汇总进度
+            // 缓存配置供后续初始化阶段使用
+            _lastMustAssetsCfg = cfg;
+
+            // 预热逻辑：顺序加载所有声明的资源，并实时汇总进度（主线程）
             var totalItems = 0;
             if (cfg.resourcesPrefabs != null) totalItems += cfg.resourcesPrefabs.Count;
-            if (cfg.addressableAssets != null) totalItems += cfg.addressableAssets.Count;
             if (totalItems <= 0) totalItems = 1; // 防止除零
 
             int completed = 0;
             System.Func<System.Threading.Tasks.Task> report = async () =>
             {
-                // 进度区间：服务初始化后从 0.1 → 1.0
-                float baseProgress = 0.1f + 0.9f * (completed / (float)totalItems);
-                // 同时考虑最小时长：取两者较小值以避免瞬间结束
+                // 阶段内进度：0..1（按完成度与最小时长取较小）
+                float done = completed / (float)totalItems;
                 float tTime = Mathf.Clamp01((Time.realtimeSinceStartup - start) / minDur);
-                float visual = Mathf.Min(baseProgress, Mathf.Lerp(0.1f, 1f, tTime));
-                ReportProgress(visual);
+                float stage = Mathf.Min(done, tTime);
+                // 映射到总进度 0..0.8
+                ReportProgress(0.8f * stage);
                 await System.Threading.Tasks.Task.Yield();
             };
 
@@ -234,46 +253,27 @@ namespace TD.Core
                 }
             }
 
-            // #if ENABLE_ADDRESSABLES
-            // Addressables 资源加载（仅加载到内存，不实例化）
-            if (cfg.addressableAssets != null)
-            {
-                foreach (var addr in cfg.addressableAssets)
-                {
-                    if (string.IsNullOrEmpty(addr)) { completed++; continue; }
-                    try
-                    {
-                        var handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Object>(addr);
-                        await handle.Task;
-                        // 不在此释放，保持缓存；若想释放可在此调用 Addressables.Release(handle);
-                    }
-                    catch { }
-                    finally
-                    {
-                        completed++;
-                        await report();
-                    }
-                }
-            }
-// #endif
+        }
 
-            // 保证最小时间
-            // while ((Time.realtimeSinceStartup - start) < minDur)
-            // {
-            //     await report();
-            //     await System.Threading.Tasks.Task.Delay(33);
-            // }
-            // ReportProgress(1f);
+        private void InitializeAndRegisterLifecycle()
+        {
+            var container = ServiceContainer.Instance;
+            var driver = UpdateDriver.Instance;
+            foreach (var service in container.GetAllServices())
+            {
+                if (service is IInitializable init)
+                {
+                    init.Initialize();
+                }
+                if (service is IUpdatable u) driver.RegisterUpdatable(u);
+                if (service is ILateUpdatable lu) driver.RegisterLateUpdatable(lu);
+                if (service is IFixedUpdatable fu) driver.RegisterFixedUpdatable(fu);
+            }
         }
 
         private static void ReportProgress(float value)
         {
             try { InitializationProgress?.Invoke(Mathf.Clamp01(value)); } catch { }
-        }
-
-        private static void DebugLogError(string msg)
-        {
-            Debug.LogError(msg);
         }
 
         private void OnDestroy()
