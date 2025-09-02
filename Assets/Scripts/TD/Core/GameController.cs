@@ -6,6 +6,8 @@ using TD.UI;
 using UnityEngine.UI;
 using TD.UI.Panels;
 using TD.Assets;
+// using TD.Levels; // 避免直接依赖具体命名空间，优先通过接口
+using TD.Core;
 
 namespace TD.Core
 {
@@ -132,8 +134,8 @@ namespace TD.Core
                 _currentLevel = null;
             }
 
-            // 加载并实例化关卡预制体（Resources: Levels/Level_{id}）
-            var key = $"Levels/Level_{levelId}";
+            // 加载并实例化统一关卡预制体（Resources: Levels/LevelMain）
+            var key = "Levels/LevelMain";
             GameObject prefab = null;
             if (_assetProvider != null)
             {
@@ -149,6 +151,14 @@ namespace TD.Core
             {
                 _currentLevel = Object.Instantiate(prefab, _levelRoot, false);
                 _currentLevel.name = $"[Level_{levelId}]";
+
+                // 传入 LevelContext 给 LevelManager
+                var lm = _currentLevel.GetComponentInChildren<ILevelManager>();
+                if (lm != null)
+                {
+
+                    lm.Init(levelId);
+                }
             }
 
             // 摄像机切换：如果关卡内自带摄像机，则临时禁用原有摄像机，启用关卡摄像机

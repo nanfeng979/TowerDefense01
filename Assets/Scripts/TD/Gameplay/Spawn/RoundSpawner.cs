@@ -39,9 +39,17 @@ namespace TD.Gameplay.Spawn
         private CancellationTokenSource _cts;
         private bool _waitingForRuneSelection = false;
 
-        private async void Start()
+        // 由 LevelManager 调用，开始按配置生成回合
+        public async void Begin(LevelConfig levelConfig)
         {
             if (!Application.isPlaying) { enabled = false; return; }
+            if (_running)
+            {
+                Debug.LogWarning("[RoundSpawner] Already running; ignoring Begin");
+                return;
+            }
+
+            // 获取必要服务
             if (!TD.Core.ServiceContainer.Instance.TryGet<IConfigService>(out _config))
             {
                 Debug.LogError("[RoundSpawner] IConfigService not found. Ensure Bootstrapper exists.");
@@ -53,10 +61,10 @@ namespace TD.Gameplay.Spawn
                 enabled = false; return;
             }
 
-            _level = await _config.GetLevelAsync(levelId);
+            _level = levelConfig;
             if (_level == null)
             {
-                Debug.LogError($"[RoundSpawner] Level not found: {levelId}");
+                Debug.LogError("[RoundSpawner] Begin failed: LevelConfig is null");
                 enabled = false; return;
             }
 
@@ -79,7 +87,8 @@ namespace TD.Gameplay.Spawn
                 _pools[key] = _poolService.GetOrCreate(key, kv.Value, enemiesRoot, prewarm: 8);
             }
 
-            // 监听符文选择完成事件
+            // 监听符文选择完成事件（确保不重复订阅）
+            TD.Core.GameEvents.RuneSelectionCompleted -= OnRuneSelectionCompleted;
             TD.Core.GameEvents.RuneSelectionCompleted += OnRuneSelectionCompleted;
 
             _cts = new CancellationTokenSource();
@@ -95,6 +104,56 @@ namespace TD.Gameplay.Spawn
             
             // 取消事件监听
             TD.Core.GameEvents.RuneSelectionCompleted -= OnRuneSelectionCompleted;
+        }
+
+        /// <summary>
+        /// 停止当前生成流程并可选清空已生成的敌人。
+        /// </summary>
+        public void StopAndReset(bool clearSpawned = true)
+        {
+            // 停止协程/任务
+            try { _cts?.Cancel(); } catch { }
+            _cts?.Dispose();
+            _cts = null;
+            _running = false;
+            _waitingForRuneSelection = false;
+
+            // 取消事件监听（幂等）
+            TD.Core.GameEvents.RuneSelectionCompleted -= OnRuneSelectionCompleted;
+
+            // 可选清空当前已生成的敌人
+            if (clearSpawned && enemiesRoot != null)
+            {
+                var toDestroy = new List<GameObject>();
+                for (int i = enemiesRoot.childCount - 1; i >= 0; i--)
+                {
+                    var ch = enemiesRoot.GetChild(i);
+                    if (ch != null) toDestroy.Add(ch.gameObject);
+                }
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    foreach (var go in toDestroy) DestroyImmediate(go);
+                }
+                else
+#endif
+                {
+                    foreach (var go in toDestroy) Destroy(go);
+                }
+            }
+
+            // 清空本地缓存映射
+            _pools?.Clear();
+            _prefabMap?.Clear();
+        }
+
+        /// <summary>
+        /// 重新开始：先停止并清理，再用新的配置开始。
+        /// </summary>
+        public void Restart(LevelConfig cfg, bool clearSpawned = true)
+        {
+            StopAndReset(clearSpawned);
+            Begin(cfg);
         }
 
         private void OnRuneSelectionCompleted()

@@ -15,7 +15,7 @@ namespace TD.Gameplay.Map
     {
         [Header("Config")]
         public string levelId = "001";
-        public bool autoGenerateOnStart = true;
+        public bool autoGenerateOnStart = false;
         public bool clearBeforeGenerate = true;
         public float yOffset = 0f;
 
@@ -26,7 +26,7 @@ namespace TD.Gameplay.Map
             LegacyTiles
         }
         [Header("Strategy")]
-        [Tooltip("选择渲染策略：Auto 根据资源/配置自动判断；NewTerrain 使用新地形掩码/terrainMap；LegacyTiles 使用旧瓦片渲染")] 
+        [Tooltip("选择渲染策略：Auto 根据资源/配置自动判断；NewTerrain 使用新地形掩码/terrainMap；LegacyTiles 使用旧瓦片渲染")]
         public StrategySelection strategy = StrategySelection.Auto;
 
         [Header("Prefabs / Materials")]
@@ -60,6 +60,46 @@ namespace TD.Gameplay.Map
         [HideInInspector] public Transform propsRoot;
 
         private LevelConfig _level;
+
+        /// <summary>
+        /// 由 LevelManager 调用：传入关卡配置与关卡ID，执行渲染。
+        /// </summary>
+        public void Setup(string inLevelId, LevelConfig cfg)
+        {
+            if (clearBeforeGenerate)
+            {
+                ClearAll();
+            }
+
+            levelId = inLevelId;
+            _level = cfg;
+            if (_level == null)
+            {
+                Debug.LogError("[MapRenderer] Setup failed: LevelConfig is null");
+                return;
+            }
+
+            EnsureRoots();
+            IMapTerrainRenderer renderer;
+            switch (strategy)
+            {
+                case StrategySelection.NewTerrain:
+                    renderer = new TerrainMaskRenderer();
+                    break;
+                case StrategySelection.LegacyTiles:
+                    renderer = new LegacyTilesRenderer();
+                    break;
+                default:
+                    bool useNewTerrain = (grassQuadPrefab != null || soilQuadPrefab != null || _level.terrain != null || _level.terrainMap != null);
+                    renderer = useNewTerrain ? (IMapTerrainRenderer)new TerrainMaskRenderer() : new LegacyTilesRenderer();
+                    break;
+            }
+            renderer.Render(this, _level);
+            RenderSlots();
+            RenderProps();
+
+            Debug.Log($"[MapRenderer] Setup completed: {levelId}");
+        }
 
         private async void Start()
         {
@@ -173,12 +213,14 @@ namespace TD.Gameplay.Map
 
                 if (buildSlotPrefab == null)
                 {
-                    var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    cube.name = "BuildSlot";
-                    cube.transform.SetParent(slotRoot, false);
-                    cube.transform.localScale = new Vector3(0.8f * cs, 0.5f, 0.8f * cs);
-                    cube.transform.localPosition = new Vector3(pos.x, pos.y + 0.25f, pos.z);
-                    TryAttachSimpleTower(cube);
+                    var towerPrefab = Resources.Load<GameObject>("Game/Tower");
+                    if (towerPrefab == null)
+                    {
+                        Debug.LogError("[MapRenderer] Resources/Game/Tower.prefab 未找到，请将预制体放到 Resources/Game/ 下并命名为 Tower");
+                        continue;
+                    }
+                    var go = Instantiate(towerPrefab, slotRoot);
+                    go.transform.localPosition = pos;
                 }
                 else
                 {
@@ -238,6 +280,6 @@ namespace TD.Gameplay.Map
             if (propsRoot == null) propsRoot = CreateChild("[Props]");
         }
 
-    // 不再使用反射装配渲染策略，类型在编译期绑定
+        // 不再使用反射装配渲染策略，类型在编译期绑定
     }
 }

@@ -1,5 +1,6 @@
 {
   "resourcesPrefabs": [
+  "Levels/LevelMain",
     "UI/MainMenu",
     "UI/LevelSelection",
     "UI/ConfirmDialog",
