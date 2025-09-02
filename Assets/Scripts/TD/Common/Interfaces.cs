@@ -11,30 +11,6 @@ namespace TD.Common
     }
 
     /// <summary>
-    /// Update 循环驱动接口。
-    /// </summary>
-    public interface IUpdatable
-    {
-        void OnUpdate(float deltaTime);
-    }
-
-    /// <summary>
-    /// LateUpdate 循环驱动接口。
-    /// </summary>
-    public interface ILateUpdatable
-    {
-        void OnLateUpdate(float deltaTime);
-    }
-
-    /// <summary>
-    /// FixedUpdate 循环驱动接口。
-    /// </summary>
-    public interface IFixedUpdatable
-    {
-        void OnFixedUpdate(float fixedDeltaTime);
-    }
-
-    /// <summary>
     /// 销毁接口：游戏关闭或重置时调用。
     /// </summary>
     public interface IDisposableEx

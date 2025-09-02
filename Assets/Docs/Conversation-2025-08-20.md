@@ -57,7 +57,6 @@
 2) 核心框架：
    - GameBootstrapper（MonoBehaviour，最薄生命周期）
    - ServiceContainer（服务定位/轻量 DI）
-   - UpdateDriver（集中驱动 IUpdatable/ILateUpdatable/IFixedUpdatable）
 3) 通用：
    - 对象池（泛型池 + 预热）
    - JSON 序列化工具（Newtonsoft 或 Unity 内置 JsonUtility + 自定义扩展）

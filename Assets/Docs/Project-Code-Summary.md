@@ -22,7 +22,6 @@
     - ConfigServiceInterfaces.cs, ConfigService.cs
   - Core/
     - ServiceContainer.cs（服务定位器）
-    - UpdateDriver.cs（集中式 Update/Late/Fixed 驱动）
     - Bootstrapper.cs（启动器，负责装配与预热）
     - LevelVisualizer.cs + Editor/LevelVisualizerInspector.cs（Gizmos 可视化与校验）
     - PoolService.cs（统一 GameObject 池管理）
@@ -41,11 +40,9 @@
 
 ## 初始化与生命周期
 - Bootstrapper（[DefaultExecutionOrder(-10000)]）
-  - Awake：确保 UpdateDriver 存在；注册核心服务（IJsonLoader、IConfigService、PoolService），初始化 IInitializable，并自动把 IUpdatable/ILateUpdatable/IFixedUpdatable 注册进 UpdateDriver
   - Start：异步预热 Elements/Towers/Enemies 配置
-  - OnDestroy：释放所有 IDisposableEx，并清空 ServiceContainer/UpdateDriver
+  - OnDestroy：释放所有 IDisposableEx，并清空 ServiceContainer
 - ServiceContainer：静态单例，类型安全注册/获取服务；提供 IsRegistered、TryGet、GetAllServices
-- UpdateDriver：在一个 MonoBehaviour 中集中驱动各生命周期接口，避免分散 Update 带来的开销与时序复杂度
 
 ## 配置数据与可视化
 - JsonModels：Elements/Towers/Enemies/Level（含 Grid、Path、BuildSlots、Rounds）
@@ -94,7 +91,6 @@
 ## 关键类速查
 - TD.Core
   - ServiceContainer：服务注册/获取/判重
-  - UpdateDriver：集中式 Update/Late/Fixed 调度
   - Bootstrapper：启动装配与配置预热
   - PoolService：GameObject 池管理
   - LevelVisualizer：关卡 Gizmos 可视化与校验

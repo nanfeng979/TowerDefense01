@@ -13,8 +13,8 @@
 - 场景校验器：Bootstrapper 挂载并输出加载/交叉校验日志
  - Gizmo 可视化：LevelVisualizer 显示网格/路径/建造点，ColorUtil 解析 RGBA Hex
  - 自定义 Inspector：LevelVisualizerInspector 提供一键校验并显示摘要/问题
-- 核心框架：ServiceContainer（服务定位器）、UpdateDriver（统一生命周期）、Interfaces（生命周期接口）
-- 重写 Bootstrapper：接入统一初始化流程，预热配置，自动注册生命周期服务到 UpdateDriver
+- 核心框架：ServiceContainer（服务定位器）、Interfaces（生命周期接口）
+- 重写 Bootstrapper：接入统一初始化流程，预热配置
  - 对象池：新增 ObjectPool<T>/GameObjectPool 与 PoolService，并接入 Bootstrapper
  - 演示：Bullet（直线飞行超时回收）、BulletShooter（池化发射）、EnemyMover（沿路径移动）
 

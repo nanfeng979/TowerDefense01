@@ -393,12 +393,6 @@ namespace TD.UI
 
         private string Localize(string key)
         {
-#if TD_LOCALIZATION
-            if (ServiceContainer.Instance.TryGet<TD.Core.ILocalizationService>(out var loc))
-            {
-                return loc.T(key, key);
-            }
-#endif
             return key;
         }
 
