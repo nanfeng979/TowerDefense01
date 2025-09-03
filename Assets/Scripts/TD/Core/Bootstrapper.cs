@@ -2,7 +2,6 @@ using UnityEngine;
 using TD.Config;
 using TD.Common;
 using TD.UI;
-using TD.Assets;
 using TMPro;
 
 namespace TD.Core
@@ -12,7 +11,7 @@ namespace TD.Core
     /// 场景中唯一挂载，负责依赖装配与生命周期管理。
     /// </summary>
     [DefaultExecutionOrder(-10000)]
-    public class Bootstrapper : MonoBehaviour
+    public partial class Bootstrapper : MonoBehaviour
     {
         #region Fields
         // 最近一次读取的必要资源配置（用于后续 UI 注入等）
@@ -36,7 +35,8 @@ namespace TD.Core
         }
 
         /// <summary>
-        /// 供外部（如 GameController）调用的初始化入口：执行服务初始化与必要预热，并通过事件反馈进度/就绪。
+        /// 供外部（如 GameController）调用的初始化入口：
+        /// 执行服务初始化与必要预热，并通过事件反馈进度/就绪。
         /// </summary>
         public async System.Threading.Tasks.Task RunInitializationAsync()
         {
@@ -177,67 +177,5 @@ namespace TD.Core
 
         #endregion
 
-        #region Service Registration
-        private void RegisterCoreServices()
-        {
-            try
-            {
-                var container = ServiceContainer.Instance;
-
-                // JsonLoader / ConfigService
-                if (!container.IsRegistered<IJsonLoader>())
-                {
-                    container.Register<IJsonLoader>(new StreamingAssetsJsonLoader());
-                }
-                if (!container.IsRegistered<IConfigService>())
-                {
-                    var jsonLoader = container.Get<IJsonLoader>();
-                    container.Register<IConfigService>(new ConfigService(jsonLoader));
-                }
-
-                // Object Pool
-                if (!container.IsRegistered<PoolService>())
-                {
-                    container.Register<PoolService>(new PoolService());
-                }
-
-                // Stats / Runes
-                if (!container.IsRegistered<StatService>())
-                {
-                    container.Register<StatService>(new StatService());
-                }
-                if (!container.IsRegistered<RunesService>())
-                {
-                    container.Register<RunesService>(new RunesService());
-                }
-
-                // UI Resource Service
-                if (!container.IsRegistered<TD.UI.UIResourceService>())
-                {
-                    var jsonLoader = container.Get<IJsonLoader>();
-                    var uiRes = new TD.UI.UIResourceService(jsonLoader);
-                    container.Register<TD.UI.UIResourceService>(uiRes);
-                    if (!container.IsRegistered<IUIResourceService>())
-                    {
-                        container.Register<IUIResourceService>(uiRes);
-                    }
-                }
-
-                // UI Manager / Asset Provider
-                if (!container.IsRegistered<IUIManager>())
-                {
-                    container.Register<IUIManager>(new UIManager());
-                }
-                if (!container.IsRegistered<IAssetProvider>())
-                {
-                    container.Register<IAssetProvider>(new ResourcesAssetProvider());
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[Bootstrap] RegisterCoreServices failed: {ex.Message}");
-            }
-        }
-        #endregion
     }
 }
