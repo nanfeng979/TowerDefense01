@@ -20,27 +20,34 @@ namespace TD.Core
     [DefaultExecutionOrder(-9000)]
     public class GameController : MonoBehaviour
     {
+        #region Types
         public enum GameState
         {
             Menu,
             Playing,
             Paused
         }
+        #endregion
 
+        #region Singleton / State
         public static GameController Instance { get; private set; }
 
         public GameState State { get; private set; } = GameState.Menu;
+        #endregion
 
+        #region Services & Level State
         private IUIManager _uiManager;
         private IAssetProvider _assetProvider;
         private Transform _levelRoot;
         private GameObject _currentLevel;
         private readonly List<(Camera cam, bool wasEnabled, AudioListener al, bool alWasEnabled)> _savedCamStates = new();
+        #endregion
         // 场景内 Loading 根节点与控件（避免依赖 UIManager/类型）
         private GameObject _loadingRoot;
         private CanvasGroup _loadingCanvas;
         private Slider _loadingProgress;
 
+        #region Unity Lifecycle
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -65,40 +72,20 @@ namespace TD.Core
 
         private async void Start()
         {
-            // 骨架流程：场景内 Loading 显示 → 等待 Bootstrapper 广播服务就绪 → 关闭 Loading → 打开 MainMenu（若 UIManager 可用）
-            if (_loadingRoot != null)
-            {
-                if (_loadingCanvas != null) _loadingCanvas.alpha = 1f;
-                _loadingRoot.SetActive(true);
-                if (_loadingProgress != null) _loadingProgress.value = 0f;
-            }
+            // 骨架流程：Loading 显示 → 等待 Bootstrapper 初始化 → 关闭 Loading → 打开 MainMenu
+            ShowLoading();
 
-            // 运行 Bootstrapper 初始化/预热，进度直接使用 Bootstrapper 的 0..1
-            var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
-            void OnReady() { tcs.TrySetResult(true); }
-            void OnProgress(float p)
-            {
-                if (_loadingProgress != null) _loadingProgress.value = Mathf.Clamp01(p);
-            }
+            // 运行 Bootstrapper 初始化/预热
+            void OnProgress(float p) { if (_loadingProgress != null) _loadingProgress.value = Mathf.Clamp01(p); }
             Bootstrapper.InitializationProgress += OnProgress;
-            Bootstrapper.ServicesReady += OnReady;
-            // 主动触发初始化
             var bootstrap = FindObjectOfType<Bootstrapper>();
             if (bootstrap != null)
             {
-                _ = bootstrap.RunInitializationAsync();
+                try { await bootstrap.RunInitializationAsync(); }
+                catch { /* 错误已在 Bootstrapper 内部记录 */ }
             }
-            await tcs.Task;
-            Bootstrapper.ServicesReady -= OnReady;
             Bootstrapper.InitializationProgress -= OnProgress;
-
-            if (_loadingRoot != null)
-            {
-                if (_loadingCanvas != null) _loadingCanvas.alpha = 0f;
-                _loadingRoot.SetActive(false);
-            }
-
-            await InitializeAsync();
+            HideLoading();
 
             if (_uiManager != null)
             {
@@ -107,15 +94,9 @@ namespace TD.Core
 
             EnterMainMenu();
         }
+        #endregion
 
-        /// <summary>
-        /// 预留：如需额外初始化（非资源加载），可在此完成。
-        /// </summary>
-        private Task InitializeAsync()
-        {
-            return Task.CompletedTask;
-        }
-
+        #region Public API
         public void EnterMainMenu()
         {
             State = GameState.Menu;
@@ -156,7 +137,6 @@ namespace TD.Core
                 var lm = _currentLevel.GetComponentInChildren<ILevelManager>();
                 if (lm != null)
                 {
-
                     lm.Init(levelId);
                 }
             }
@@ -228,6 +208,23 @@ namespace TD.Core
             // 其他状态：按普通回退处理
             _uiManager.RouteBack();
         }
+        #endregion
+
+        #region Helpers
+        private void ShowLoading()
+        {
+            if (_loadingRoot == null) return;
+            if (_loadingCanvas != null) _loadingCanvas.alpha = 1f;
+            _loadingRoot.SetActive(true);
+            if (_loadingProgress != null) _loadingProgress.value = 0f;
+        }
+
+        private void HideLoading()
+        {
+            if (_loadingRoot == null) return;
+            if (_loadingCanvas != null) _loadingCanvas.alpha = 0f;
+            _loadingRoot.SetActive(false);
+        }
 
         private void EnsureLevelRoot()
         {
@@ -268,9 +265,6 @@ namespace TD.Core
             {
                 if (cam == null) continue;
                 cam.enabled = true;
-                var al = cam.GetComponent<AudioListener>();
-                // 若需要也可在此启用一个 AudioListener，但避免多监听器冲突
-                // 这里保持预制体内既有设置，不强制改动
             }
         }
 
@@ -296,5 +290,6 @@ namespace TD.Core
             }
             return false;
         }
+        #endregion
     }
 }
